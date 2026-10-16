@@ -1,0 +1,13 @@
+{
+  "name": "dartiqo",
+  "private": true,
+  "scripts": {
+    "build": "node build-css.cjs",
+    "check": "node --check assets/js/app.js"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.2.1",
+    "tailwindcss": "4.2.1",
+    "postcss": "8.5.23"
+  }
+}

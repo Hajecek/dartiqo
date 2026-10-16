@@ -1,0 +1,26 @@
+Options -Indexes
+DirectoryIndex index.php
+ServerSignature Off
+
+<IfModule mod_authz_core.c>
+    <FilesMatch "^(bootstrap\.php|package\.json|package-lock\.json|build-css\.cjs|README\.md)$">
+        Require all denied
+    </FilesMatch>
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteRule ^(config|routes|resources|src)(/|$) - [F,L]
+    RewriteRule ^app/(Core|Controllers|Support)(/|$) - [F,L]
+    RewriteRule ^app/.*\.php$ - [F,L]
+    RewriteRule ^app(/.*)?$ index.php [L]
+
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    RewriteRule ^ index.php [L]
+</IfModule>
