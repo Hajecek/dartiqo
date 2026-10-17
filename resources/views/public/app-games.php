@@ -260,11 +260,10 @@ foreach ($games as $row) {
 $played = $tally['win'] + $tally['loss'] + $tally['draw'];
 $winRate = $played > 0 ? (int) round($tally['win'] / $played * 100) : 0;
 $formGames = array_slice(array_values(array_filter($games, static fn (array $row): bool => $row['result'] !== 'train')), 0, 5);
-$balance = [
-    ['win', 'Výhry', (string) $tally['win']],
-    ['loss', 'Prohry', (string) $tally['loss']],
-    ['draw', 'Remízy', (string) $tally['draw']],
-    ['train', 'Trénink', (string) $tally['train']],
+$balanceTiles = [
+    ['win', 'výhry', 'bg-emerald-400/10', 'text-emerald-300'],
+    ['loss', 'prohry', 'bg-rose-400/10', 'text-rose-300'],
+    ['draw', 'remízy', 'bg-white/5', 'text-amber-200'],
 ];
 ?>
 <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -296,31 +295,51 @@ $balance = [
 </div>
 <p class="mt-6 text-xs text-zinc-500">Náhled archivu. Soupeři i výsledky jsou ukázkové.</p>
 </div>
-<aside class="flex w-full flex-col gap-4 lg:sticky lg:top-8">
-<section class="rounded-3xl border border-white/10 bg-zinc-900 p-5" aria-labelledby="balance-title">
-<p class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">Souhrn</p>
-<h2 class="mt-1" id="balance-title">Bilance</h2>
-<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
-<?php foreach ($balance as [$result, $label, $count]): ?>
-<?php $tone = dartiqo_result($result); ?>
+<aside class="w-full lg:sticky lg:top-8">
+<section class="overflow-hidden rounded-3xl border border-white/10 bg-zinc-900" aria-labelledby="balance-title">
+<div class="p-5">
+<p class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">Bilance</p>
+<h2 class="sr-only" id="balance-title">Bilance</h2>
+<div class="mt-3 flex items-end justify-between gap-3">
 <div>
-<span class="text-[10px] font-bold uppercase tracking-[.18em] text-zinc-500"><?= e($label) ?></span>
-<strong class="mt-1 block font-display text-3xl <?= e($tone['text']) ?>"><?= e($count) ?></strong>
+<strong class="block font-display text-5xl leading-none text-emerald-300"><?= e((string) $winRate) ?> %</strong>
+<p class="mt-2 text-sm">vyhraných zápasů</p>
+</div>
+<p class="mb-1 text-right text-xs"><?= e((string) $tally['win']) ?> z <?= e((string) $played) ?></p>
+</div>
+<?php if ($played > 0): ?>
+<div class="mt-4 flex h-2 gap-px overflow-hidden rounded-full bg-white/10" role="img" aria-label="<?= e((string) $tally['win']) ?> výher, <?= e((string) $tally['loss']) ?> proher, <?= e((string) $tally['draw']) ?> remíz">
+<?php if ($tally['win'] > 0): ?><i class="h-full bg-emerald-400" style="flex:<?= (int) $tally['win'] ?>"></i><?php endif; ?>
+<?php if ($tally['loss'] > 0): ?><i class="h-full bg-rose-400" style="flex:<?= (int) $tally['loss'] ?>"></i><?php endif; ?>
+<?php if ($tally['draw'] > 0): ?><i class="h-full bg-amber-300" style="flex:<?= (int) $tally['draw'] ?>"></i><?php endif; ?>
+</div>
+<?php endif; ?>
+<div class="mt-4 grid grid-cols-3 gap-2 text-center">
+<?php foreach ($balanceTiles as [$key, $label, $bg, $color]): ?>
+<div class="rounded-2xl px-2 py-3 <?= e($bg) ?>">
+<strong class="block font-display text-2xl <?= e($color) ?>"><?= e((string) $tally[$key]) ?></strong>
+<span class="text-[10px] uppercase tracking-widest text-zinc-500"><?= e($label) ?></span>
 </div>
 <?php endforeach; ?>
 </div>
-<p class="mt-4 text-sm"><?= e((string) $winRate) ?> % vyhraných zápasů, <?= e((string) $tally['win']) ?> z <?= e((string) $played) ?>.</p>
-</section>
-<section class="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+<?php if ($tally['train'] > 0): ?>
+<p class="mt-3 text-xs">Trénink <b class="text-accent"><?= e((string) $tally['train']) ?></b> · mimo zápasy</p>
+<?php endif; ?>
+</div>
+<div class="border-t border-white/10 px-5 py-4">
 <p class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">Forma</p>
 <p class="mt-1 text-xs">posledních pět zápasů</p>
 <div class="mt-4 flex gap-2" aria-label="Forma výher, remíz a proher">
 <?php foreach ($formGames as $row): ?>
 <?php $tone = dartiqo_result((string) $row['result']); ?>
-<a class="grid size-9 place-items-center rounded-full text-xs font-bold <?= e($tone['tile']) ?>" href="<?= e(url('/app/games/' . $row['id'])) ?>" title="<?= e($row['title'] . ' · ' . $row['label']) ?>"><?= e($tone['mark']) ?></a>
+<?php $short = explode(' · ', (string) $row['title'])[0]; ?>
+<a class="flex min-w-0 flex-1 flex-col items-center gap-1.5" href="<?= e(url('/app/games/' . $row['id'])) ?>" title="<?= e($row['title'] . ' · ' . $row['score'] . ' · ' . $row['label']) ?>">
+<span class="grid size-9 place-items-center rounded-full text-xs font-bold <?= e($tone['tile']) ?>"><?= e($tone['mark']) ?></span>
+<small class="w-full truncate text-center text-[10px] text-zinc-500"><?= e($short) ?></small>
+</a>
 <?php endforeach; ?>
 </div>
-<a class="mt-5 inline-flex text-xs font-semibold text-accent" href="<?= e(url('/app/statistics')) ?>">Všechny statistiky</a>
+</div>
 </section>
 </aside>
 </div>
