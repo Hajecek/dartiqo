@@ -249,6 +249,24 @@ $verdict = match ($game['result']) {
 <script src="<?= e(asset('js/vendor/chart.umd.min.js')) ?>"></script>
 <script type="application/json" id="match-data"><?= json_encode($viz, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 <?php else: ?>
+<?php
+$tally = ['win' => 0, 'loss' => 0, 'draw' => 0, 'train' => 0];
+foreach ($games as $row) {
+    $key = (string) $row['result'];
+    if (isset($tally[$key])) {
+        $tally[$key]++;
+    }
+}
+$played = $tally['win'] + $tally['loss'] + $tally['draw'];
+$winRate = $played > 0 ? (int) round($tally['win'] / $played * 100) : 0;
+$formGames = array_slice(array_values(array_filter($games, static fn (array $row): bool => $row['result'] !== 'train')), 0, 5);
+$balance = [
+    ['win', 'Výhry', (string) $tally['win']],
+    ['loss', 'Prohry', (string) $tally['loss']],
+    ['draw', 'Remízy', (string) $tally['draw']],
+    ['train', 'Trénink', (string) $tally['train']],
+];
+?>
 <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 <div>
 <p class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">Archiv</p>
@@ -258,7 +276,8 @@ $verdict = match ($game['result']) {
 <a class="text-xs font-semibold text-accent" href="<?= e(url('/app/statistics')) ?>">Statistiky</a>
 </header>
 
-<div class="mb-5 flex flex-col gap-3" id="games-page">
+<div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,.8fr)]">
+<div class="mb-5 flex min-w-0 flex-col gap-3" id="games-page">
 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 <div class="flex flex-wrap gap-2" role="group" aria-label="Výsledek">
 <?php foreach ($filters as $index => [$id, $label, $dot]): ?>
@@ -275,7 +294,35 @@ $verdict = match ($game['result']) {
 <?php endforeach; ?>
 <p class="py-8 text-center text-sm text-zinc-500" id="games-empty" hidden>Tomuto filtru neodpovídá žádná hra.</p>
 </div>
-</div>
 <p class="mt-6 text-xs text-zinc-500">Náhled archivu. Soupeři i výsledky jsou ukázkové.</p>
+</div>
+<aside class="flex w-full flex-col gap-4 lg:sticky lg:top-8">
+<section class="rounded-3xl border border-white/10 bg-zinc-900 p-5" aria-labelledby="balance-title">
+<p class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">Souhrn</p>
+<h2 class="mt-1" id="balance-title">Bilance</h2>
+<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+<?php foreach ($balance as [$result, $label, $count]): ?>
+<?php $tone = dartiqo_result($result); ?>
+<div>
+<span class="text-[10px] font-bold uppercase tracking-[.18em] text-zinc-500"><?= e($label) ?></span>
+<strong class="mt-1 block font-display text-3xl <?= e($tone['text']) ?>"><?= e($count) ?></strong>
+</div>
+<?php endforeach; ?>
+</div>
+<p class="mt-4 text-sm"><?= e((string) $winRate) ?> % vyhraných zápasů, <?= e((string) $tally['win']) ?> z <?= e((string) $played) ?>.</p>
+</section>
+<section class="rounded-3xl border border-white/10 bg-zinc-900 p-5">
+<p class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">Forma</p>
+<p class="mt-1 text-xs">posledních pět zápasů</p>
+<div class="mt-4 flex gap-2" aria-label="Forma výher, remíz a proher">
+<?php foreach ($formGames as $row): ?>
+<?php $tone = dartiqo_result((string) $row['result']); ?>
+<a class="grid size-9 place-items-center rounded-full text-xs font-bold <?= e($tone['tile']) ?>" href="<?= e(url('/app/games/' . $row['id'])) ?>" title="<?= e($row['title'] . ' · ' . $row['label']) ?>"><?= e($tone['mark']) ?></a>
+<?php endforeach; ?>
+</div>
+<a class="mt-5 inline-flex text-xs font-semibold text-accent" href="<?= e(url('/app/statistics')) ?>">Všechny statistiky</a>
+</section>
+</aside>
+</div>
 <?php endif; ?>
 </main>

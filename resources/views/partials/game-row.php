@@ -7,14 +7,14 @@ $youScore = $versus ? $scoreParts[1] : (string) $game['score'];
 $oppScore = $versus ? $scoreParts[2] : '';
 $oppClass = $game['result'] === 'draw' ? $style['text'] : ($game['result'] === 'loss' ? 'text-emerald-300' : 'text-zinc-300');
 $fade = match ($game['result']) {
-    'win' => 'from-emerald-400/40',
-    'loss' => 'from-rose-400/40',
-    'draw' => 'from-amber-300/35',
-    default => 'from-accent/35',
+    'win' => 'from-emerald-400/25',
+    'loss' => 'from-rose-400/25',
+    'draw' => 'from-amber-300/20',
+    default => 'from-accent/20',
 };
 ?>
 <a class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 py-3.5 pr-4 pl-4 hover:border-white/25" <?= $attrs ?> href="<?= e(url('/app/games/' . $game['id'])) ?>">
-<span class="pointer-events-none absolute inset-y-0 right-0 z-0 w-2/3 bg-gradient-to-l <?= e($fade) ?> to-transparent" aria-hidden="true"></span>
+<span class="pointer-events-none absolute inset-y-0 right-0 z-0 w-40 bg-gradient-to-l <?= e($fade) ?> to-transparent" aria-hidden="true"></span>
 <span class="pointer-events-none absolute top-1/2 right-4 z-0 flex -translate-y-1/2 items-center font-display text-3xl leading-none" aria-hidden="true">
 <?php if ($versus): ?>
 <span class="<?= e($style['text']) ?>"><?= e($youScore) ?></span><span class="px-1.5 text-zinc-600">:</span><span class="<?= e($oppClass) ?>"><?= e($oppScore) ?></span>
