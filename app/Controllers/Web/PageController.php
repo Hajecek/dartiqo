@@ -12,7 +12,7 @@ final class PageController
     /** @param array<string, string> $params */
     public function home(Request $request, array $params = []): void
     {
-        $this->page('public.home', 'Tvá hra. Tvůj odkaz. | Dartiqo', 'reference-home');
+        $this->page('public.home', 'Tvá hra. Tvůj odkaz. | Dartiqo', 'is-home');
     }
 
     /** @param array<string, string> $params */
@@ -89,19 +89,38 @@ final class PageController
     /** @param array<string, string> $params */
     public function dashboard(Request $request, array $params = []): void
     {
-        $this->page('public.dashboard', 'Objev svou hru | Dartiqo');
+        $this->page('public.dashboard', 'Přehled | Dartiqo', 'app-body', 'layouts.app');
+    }
+
+    /** @param array<string, string> $params */
+    public function appStatistics(Request $request, array $params = []): void
+    {
+        $this->page('public.app-statistics', 'Statistiky | Dartiqo', 'app-body', 'layouts.app');
+    }
+
+    /** @param array<string, string> $params */
+    public function appGames(Request $request, array $params = []): void
+    {
+        $id = (string) ($params['id'] ?? '');
+        $this->page(
+            'public.app-games',
+            $id !== '' ? 'Detail zápasu | Dartiqo' : 'Moje hry | Dartiqo',
+            'app-body',
+            'layouts.app',
+            ['matchId' => $id]
+        );
     }
 
     /** @param array<string, string> $params */
     public function profile(Request $request, array $params = []): void
     {
-        $this->page('public.profile', 'Objev svou hru | Dartiqo');
+        $this->page('public.profile', 'Profil | Dartiqo', 'app-body', 'layouts.app');
     }
 
     /** @param array<string, string> $params */
     public function settings(Request $request, array $params = []): void
     {
-        $this->page('public.settings', 'Objev svou hru | Dartiqo');
+        $this->page('public.settings', 'Nastavení | Dartiqo', 'app-body', 'layouts.app');
     }
 
     /** @param array<string, string> $params */
@@ -128,11 +147,12 @@ final class PageController
         $this->page('auth.reset-password', 'Objev svou hru | Dartiqo', '', 'layouts.auth');
     }
 
-    private function page(string $view, string $title, string $bodyClass = '', string $layout = 'layouts.public'): void
+    /** @param array<string, mixed> $data */
+    private function page(string $view, string $title, string $bodyClass = '', string $layout = 'layouts.public', array $data = []): void
     {
-        View::render($view, [
+        View::render($view, array_merge([
             'title' => $title,
             'bodyClass' => $bodyClass,
-        ], $layout);
+        ], $data), $layout);
     }
 }
