@@ -7,14 +7,14 @@ $youScore = $versus ? $scoreParts[1] : (string) $game['score'];
 $oppScore = $versus ? $scoreParts[2] : '';
 $oppClass = $game['result'] === 'draw' ? $style['text'] : ($game['result'] === 'loss' ? 'text-emerald-300' : 'text-zinc-300');
 $fade = match ($game['result']) {
-    'win' => 'linear-gradient(to left, #00d29455 0%, #00d29433 18%, #00d29418 42%, #00d29408 68%, transparent 100%)',
-    'loss' => 'linear-gradient(to left, #ff667f55 0%, #ff667f33 18%, #ff667f18 42%, #ff667f08 68%, transparent 100%)',
-    'draw' => 'linear-gradient(to left, #ffd2364d 0%, #ffd2362b 18%, #ffd23614 42%, #ffd23608 68%, transparent 100%)',
-    default => 'linear-gradient(to left, #faff004d 0%, #faff002b 18%, #faff0014 42%, #faff0008 68%, transparent 100%)',
+    'win' => 'linear-gradient(to left, #00d29455 0%, #00d29422 40%, transparent 100%)',
+    'loss' => 'linear-gradient(to left, #ff667f55 0%, #ff667f22 40%, transparent 100%)',
+    'draw' => 'linear-gradient(to left, #ffd2364a 0%, #ffd2361c 40%, transparent 100%)',
+    default => 'linear-gradient(to left, #faff004a 0%, #faff001c 40%, transparent 100%)',
 };
 ?>
 <a class="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 py-3.5 pr-4 pl-4 hover:border-white/25" <?= $attrs ?> href="<?= e(url('/app/games/' . $game['id'])) ?>">
-<span class="pointer-events-none absolute inset-0 z-0" style="background:<?= e($fade) ?>" aria-hidden="true"></span>
+<span class="pointer-events-none absolute z-0" style="top:0;right:0;bottom:0;width:9rem;background:<?= e($fade) ?>" aria-hidden="true"></span>
 <span class="pointer-events-none absolute top-1/2 right-4 z-0 flex -translate-y-1/2 items-center font-display text-3xl leading-none" aria-hidden="true">
 <?php if ($versus): ?>
 <span class="<?= e($style['text']) ?>"><?= e($youScore) ?></span><span class="px-1.5 text-zinc-600">:</span><span class="<?= e($oppClass) ?>"><?= e($oppScore) ?></span>
