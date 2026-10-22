@@ -18,7 +18,7 @@ $rowIcon = static fn (string $icon, string $tone = 'bg-white/[.05] text-zinc-300
 <?= $rowIcon('moon', 'bg-accent/10 text-accent ring-accent/25') ?>
 <div class="min-w-0 flex-1">
 <strong class="block text-sm font-semibold">Světlý / tmavý režim</strong>
-<p class="text-xs text-zinc-500">Mění marketingové stránky. Herní přehled zůstává tmavý, stejně jako v aplikaci.</p>
+<p class="text-xs text-zinc-500">Platí pro aplikaci i marketingové stránky a zapamatuje se v tomhle prohlížeči.</p>
 </div>
 <button type="button" data-theme class="pill shrink-0">Přepnout</button>
 </div>

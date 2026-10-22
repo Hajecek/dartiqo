@@ -22,8 +22,7 @@ $activeFor = static function (string $id) use ($path): bool {
 <aside id="app-rail" class="fixed z-40 hidden flex-col rounded-3xl border border-white/10 bg-zinc-900/95 shadow-[0_18px_50px_rgb(0_0_0/0.35)] backdrop-blur-xl lg:flex" aria-label="Aplikace">
 <div class="rail-clip">
 <div class="rail-head">
-<a class="rail-row min-w-0 font-display text-2xl font-bold tracking-tighter [&_img]:size-9 [&_img]:shrink-0 [&_img]:rounded-lg" href="<?= e(url('/app')) ?>" title="Dartiqo"><img src="<?= e(asset('images/logo.png')) ?>" alt=""><span class="rail-label">dartiqo</span></a>
-</div>
+<a class="rail-row min-w-0 font-display text-2xl font-bold tracking-tighter [&_img]:size-9 [&_img]:shrink-0 [&_img]:rounded-lg" href="<?= e(url('/app')) ?>" title="Dartiqo"><img src="<?= e(asset('images/logo.png')) ?>" alt=""><span class="rail-label">dartiqo</span></a></div>
 <nav class="mt-6 flex flex-1 flex-col gap-1" aria-label="Sekce">
 <?php foreach ($tabs as [$id, $label, $href, $d]): ?>
 <a class="rail-row rounded-2xl px-3 py-2.5 text-sm text-zinc-400 hover:bg-white/5 hover:text-zinc-100 [&.active]:bg-accent [&.active]:font-semibold [&.active]:text-black [&_svg]:size-5 [&_svg]:shrink-0<?= $activeFor($id) ? ' active' : '' ?>" data-tab="<?= e($id) ?>" href="<?= e(url($href)) ?>" title="<?= e($label) ?>"><?= $icon($d) ?><span class="rail-label"><?= e($label) ?></span></a>

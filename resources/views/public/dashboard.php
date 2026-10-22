@@ -18,10 +18,10 @@ $trend = dartiqo_series(30, 58.4, 10);
 $trendMax = max($trend);
 $trendMin = min($trend) - 6;
 $kpis = [
-    ['Průměr', '58.4', '+2.4', 'za 30 dní', dartiqo_series(12, 58.4, 6, 1.2), '#faff00'],
-    ['Výhry', '64 %', '18 / 28', 'zápasů', [52, 55, 50, 58, 61, 57, 60, 63, 59, 62, 66, 64], '#34d399'],
-    ['Zavírání', '32 %', '18 / 56', 'na double', [26, 28, 25, 30, 27, 31, 29, 33, 30, 31, 34, 32], '#faff00'],
-    ['Maximum 180', '9', '+3', 'za 30 dní', [0, 1, 0, 0, 2, 1, 0, 1, 1, 0, 2, 1], '#f472b6'],
+    ['Průměr', '58.4', '+2.4', 'za 30 dní', '#faff00', null, '', dartiqo_line(dartiqo_series(12, 58.4, 6, 1.2), '#faff00', ['ref' => 58.4])],
+    ['Výhry', '64 %', '+6 %', 'za 30 dní', '#34d399', 64, '18/28', dartiqo_line([52, 55, 50, 58, 61, 57, 60, 63, 59, 62, 66, 64], '#34d399', ['ref' => 50, 'refLabel' => '50 %', 'unit' => ' %'])],
+    ['Zavírání', '32 %', '+3 %', 'na double za 30 dní', '#38bdf8', 32, '18/56', dartiqo_bars([26, 28, 25, 30, 27, 31, 29, 33, 30, 31, 34, 32], '#38bdf8', ['unit' => ' %'])],
+    ['Maximum 180', '9', '+3', 'za 30 dní', '#f472b6', null, '', dartiqo_bars([0, 1, 0, 0, 2, 1, 0, 1, 1, 0, 2, 1], '#f472b6', ['unit' => '×'])],
 ];
 $tasks = [
     ['Tři T20 v kole', 'Hotovo · zásah 180', true],
@@ -39,7 +39,7 @@ $tasks = [
 <div class="flex flex-wrap items-center gap-2">
 <button class="pill" type="button" data-sheet="sheet-daily"><?= dartiqo_i('flag') ?><span>Denní výzva</span><b>1</b></button>
 <button class="pill" type="button" data-sheet="sheet-streak"><?= dartiqo_i('flame', 'text-orange-300') ?><span>Série</span><b>4</b></button>
-<a class="icon-btn" href="<?= e(url('/app/settings')) ?>" aria-label="Nastavení"><?= dartiqo_i('gear') ?></a>
+<?= dartiqo_theme_toggle() ?>
 </div>
 </header>
 
@@ -52,7 +52,7 @@ $tasks = [
 <div class="flex items-center gap-4">
 <span class="relative shrink-0">
 <span class="grid size-16 place-items-center overflow-hidden rounded-2xl bg-accent text-xl font-bold text-black shadow-[0_10px_30px_-10px_#faff00aa] [&_img]:size-full [&_img]:object-cover" data-player-avatar>A</span>
-<span class="absolute -right-1.5 -bottom-1.5 grid size-7 place-items-center rounded-lg border-2 border-zinc-900 bg-zinc-100 text-[11px] font-bold text-black">12</span>
+<span class="absolute -right-1.5 -bottom-1.5 grid size-7 place-items-center rounded-lg border-2 border-zinc-900 bg-zinc-100 text-[11px] font-bold text-zinc-950">12</span>
 </span>
 <span class="min-w-0 flex-1">
 <strong class="block truncate text-lg font-semibold" data-player-full>Alex Novák</strong>
@@ -68,7 +68,7 @@ $tasks = [
 <span class="chip mb-2 bg-emerald-400/10 text-emerald-300"><?= dartiqo_i('up', 'size-3') ?>6.1</span>
 </div>
 </div>
-<div class="h-16 sm:h-20"><?= dartiqo_spark(dartiqo_series(24, 56.8, 14, 0.4)) ?></div>
+<div class="h-20 sm:h-24"><?= dartiqo_line(dartiqo_series(24, 56.8, 14, 0.4), '#faff00', ['ref' => 56.8, 'refLabel' => 'Ø 56.8', 'peak' => true, 'grid' => 3]) ?></div>
 </div>
 <div>
 <div class="mb-2 flex items-center justify-between text-xs"><span class="text-zinc-400">Level 12 → 13</span><span class="num text-zinc-300">640 <span class="text-zinc-500">/ 1 000 XP</span></span></div>
@@ -90,11 +90,14 @@ $tasks = [
 </button>
 
 <section class="grid grid-cols-2 gap-4 @4xl/dash:col-span-12 @4xl/dash:grid-cols-4" aria-label="Základní statistiky za 30 dní">
-<?php foreach ($kpis as [$label, $value, $delta, $note, $series, $color]): ?>
+<?php foreach ($kpis as [$label, $value, $delta, $note, $color, $ring, $ringLabel, $chart]): ?>
 <article class="panel flex flex-col gap-4 p-4! sm:p-5!">
 <div class="flex items-center justify-between gap-2"><span class="eyebrow tracking-[.12em]"><?= e($label) ?></span><span class="size-1.5 rounded-full" style="background:<?= e($color) ?>;box-shadow:0 0 10px <?= e($color) ?>"></span></div>
+<div class="flex min-h-12 items-center justify-between gap-3">
 <strong class="num text-3xl leading-none sm:text-4xl"><?= e($value) ?></strong>
-<div class="h-9"><?= dartiqo_spark($series, $color) ?></div>
+<?php if ($ring !== null): ?><?= dartiqo_ring($ring, $color, $ringLabel) ?><?php endif; ?>
+</div>
+<div class="mt-2 h-12"><?= $chart ?></div>
 <small class="text-xs text-zinc-500"><b class="font-semibold text-zinc-300"><?= e($delta) ?></b> <?= e($note) ?></small>
 </article>
 <?php endforeach; ?>
@@ -112,7 +115,7 @@ $tasks = [
 <span class="pointer-events-none absolute inset-x-0 border-t border-dashed border-white/15" style="bottom:<?= e((string) round((58.4 - $trendMin) / ($trendMax - $trendMin) * 100, 1)) ?>%" aria-hidden="true"><span class="absolute -top-5 right-0 text-[10px] text-zinc-500">Ø 58.4</span></span>
 <?php foreach ($trend as $i => $value): $isLast = $i === count($trend) - 1; ?>
 <span class="group/bar relative flex-1 rounded-t-md transition-colors <?= $isLast ? 'bg-accent shadow-[0_0_20px_#faff0066]' : ($value === $trendMax ? 'bg-accent/70' : 'bg-white/[.08] hover:bg-white/25') ?>" style="height:<?= e((string) round(($value - $trendMin) / ($trendMax - $trendMin) * 100, 1)) ?>%" title="<?= e((string) $value) ?>">
-<span class="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-black group-hover/bar:block"><?= e((string) $value) ?></span>
+<span class="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-zinc-950 group-hover/bar:block"><?= e((string) $value) ?></span>
 </span>
 <?php endforeach; ?>
 </div>

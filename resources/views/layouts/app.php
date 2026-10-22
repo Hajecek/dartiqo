@@ -6,7 +6,7 @@
 <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
 <div class="absolute -top-48 right-[-10%] h-[36rem] w-[52rem] rounded-full bg-[radial-gradient(closest-side,#faff0014,transparent)] blur-2xl"></div>
 <div class="absolute bottom-[-20rem] left-[20%] h-[32rem] w-[44rem] rounded-full bg-[radial-gradient(closest-side,#34d39908,transparent)] blur-2xl"></div>
-<div class="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,#000,transparent_70%)] bg-[size:28px_28px]"></div>
+<div class="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] light:bg-[radial-gradient(#0000000f_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,#000,transparent_70%)] bg-[size:28px_28px]"></div>
 </div>
 <div id="root" class="app-shell min-h-svh">
 <?php require __DIR__ . '/../partials/app-nav.php'; ?>
