@@ -3,10 +3,22 @@
 declare(strict_types=1);
 
 use App\Core\Application;
+use App\Core\Auth;
+use App\Core\Database;
 
 function app(): Application
 {
     return Application::getInstance();
+}
+
+function db(): Database
+{
+    return app()->db();
+}
+
+function auth(): Auth
+{
+    return app()->auth();
 }
 
 function e(mixed $value): string

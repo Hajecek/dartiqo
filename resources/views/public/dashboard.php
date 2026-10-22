@@ -40,8 +40,11 @@ $tasks = [
 <button class="pill" type="button" data-sheet="sheet-daily"><?= dartiqo_i('flag') ?><span>Denní výzva</span><b>1</b></button>
 <button class="pill" type="button" data-sheet="sheet-streak"><?= dartiqo_i('flame', 'text-orange-300') ?><span>Série</span><b>4</b></button>
 <?= dartiqo_theme_toggle() ?>
+<button class="icon-btn text-rose-400 hover:bg-rose-400/10 hover:text-rose-300" type="button" data-logout aria-label="Odhlásit se" title="Odhlásit se"><?= dartiqo_i('logout') ?></button>
 </div>
 </header>
+
+<div id="live-hero" class="mb-4" data-href="<?= e(url('/app/live')) ?>" hidden></div>
 
 <div class="grid gap-4 @4xl/dash:grid-cols-12">
 

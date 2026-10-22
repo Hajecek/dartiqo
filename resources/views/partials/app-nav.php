@@ -4,6 +4,7 @@ $tabs = [
     ['home', 'Přehled', '/app', 'M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z'],
     ['stats', 'Statistiky', '/app/statistics', 'M4 19V9 M10 19V5 M16 19v-6 M22 19V8'],
     ['games', 'Moje hry', '/app/games', 'M8 6h12M8 12h12M8 18h8M4 6h.01M4 12h.01M4 18h.01'],
+    ['career', 'Kariéra', '/app/career', 'M8 4h8v5a4 4 0 0 1-8 0V4Z M8 6H5a3 3 0 0 0 3 4 M16 6h3a3 3 0 0 1-3 4 M12 13v4 M8 20h8'],
     ['profile', 'Profil', '/app/profile', 'M12 12a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2Z M5.5 20.2a6.5 6.5 0 0 1 13 0'],
 ];
 $icon = static function (string $d): string {
@@ -14,6 +15,7 @@ $activeFor = static function (string $id) use ($path): bool {
         'profile' => $path === '/app/profile',
         'stats' => $path === '/app/statistics',
         'games' => $path === '/app/games' || str_starts_with($path, '/app/games/'),
+        'career' => $path === '/app/career',
         'home' => $path === '/app',
         default => false,
     };
@@ -30,7 +32,7 @@ $activeFor = static function (string $id) use ($path): bool {
 </nav>
 <div class="mt-auto border-t border-white/10 pt-4">
 <a class="rail-row rounded-2xl px-1 py-2 [&_strong]:block [&_strong]:text-sm [&_small]:text-xs [&_small]:text-zinc-500" href="<?= e(url('/app/profile')) ?>" title="Profil">
-<span class="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-sm font-bold text-black" data-player-avatar>A</span>
+<span class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-accent text-xs font-bold text-black [&_img]:size-full [&_img]:object-cover" data-player-avatar>A</span>
 <span class="rail-label"><strong data-player-full>Alex Novák</strong><small data-player-user>@alex180</small></span>
 </a>
 <div class="rail-foot mt-2 flex gap-1 px-1 text-xs text-zinc-400 [&_a]:text-zinc-400 [&_a]:hover:text-white [&_button]:text-zinc-400 [&_button]:hover:text-white [&_svg]:size-4 [&_svg]:shrink-0">
@@ -43,7 +45,7 @@ $activeFor = static function (string $id) use ($path): bool {
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6 9 12l6 6"/></svg>
 </button>
 </aside>
-<nav class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-white/10 bg-zinc-950/95 px-1 py-1 backdrop-blur-xl lg:hidden [&_a]:flex [&_a]:flex-col [&_a]:items-center [&_a]:gap-1 [&_a]:py-1 [&_a]:text-[10px] [&_a]:text-zinc-500 [&_a.active]:text-accent [&_svg]:size-5" aria-label="Hlavní sekce">
+<nav class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-white/10 bg-zinc-950/95 px-1 py-1 backdrop-blur-xl lg:hidden [&_a]:flex [&_a]:flex-col [&_a]:items-center [&_a]:gap-1 [&_a]:py-1 [&_a]:text-[10px] [&_a]:text-zinc-500 [&_a.active]:text-accent [&_svg]:size-5" aria-label="Hlavní sekce">
 <?php foreach ($tabs as [$id, $label, $href, $d]): ?>
 <a class="<?= $activeFor($id) ? 'active' : '' ?>" data-tab="<?= e($id) ?>" href="<?= e(url($href)) ?>"><?= $icon($d) ?><span><?= e($label) ?></span></a>
 <?php endforeach; ?>

@@ -9,4 +9,10 @@ Otevři http://localhost/dartiqo/.
 - `resources/views` — šablony
 - `assets` — styly, skript a obrázky
 
-Jde o designové demo. Přihlášení, online hra a statistiky nejsou napojené na databázi.
+## Databáze
+
+1. Spusť MySQL v XAMPPu a nahraj schéma: `/Applications/XAMPP/xamppfiles/bin/mysql -uroot < database/schema.sql` (nebo import přes phpMyAdmin).
+2. Přístupové údaje jsou v `config/database.php` (lze přepsat proměnnými `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
+3. Apache (uživatel `daemon`) musí mít zápis do `uploads/avatars`: `chmod 777 uploads/avatars`.
+
+Registrace a přihlášení ukládají uživatele do tabulky `users`. Online hra a statistiky jsou zatím ukázková data.

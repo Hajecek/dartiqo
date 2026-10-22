@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Repositories\UserRepository;
 use Throwable;
 
 final class Application
@@ -11,6 +12,8 @@ final class Application
     private static ?self $instance = null;
     private Router $router;
     private Request $request;
+    private Database $database;
+    private Auth $auth;
 
     /** @var array<string, mixed> */
     private array $config = [];
@@ -38,9 +41,12 @@ final class Application
         $root = dirname(__DIR__, 2);
         $this->config = [
             'app' => require $root . '/config/app.php',
+            'database' => require $root . '/config/database.php',
         ];
         $this->router = new Router();
         $this->request = new Request();
+        $this->database = new Database($this->config['database']);
+        $this->auth = new Auth(new UserRepository($this->database));
     }
 
     public function run(): void
@@ -73,6 +79,22 @@ final class Application
     public function request(): Request
     {
         return $this->request;
+    }
+
+    public function db(): Database
+    {
+        return $this->database;
+    }
+
+    public function auth(): Auth
+    {
+        return $this->auth;
+    }
+
+    public function redirect(string $path): never
+    {
+        header('Location: ' . $this->url($path), true, 302);
+        exit;
     }
 
     public function url(string $path = '/'): string

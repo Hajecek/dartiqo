@@ -24,4 +24,42 @@ final class Request
 
         return $uri === '/' ? '/' : rtrim($uri, '/');
     }
+
+    public function header(string $name): string
+    {
+        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+
+        return (string) ($_SERVER[$key] ?? '');
+    }
+
+    public function bearerToken(): string
+    {
+        // Apache s mod_php hlavičku Authorization do $_SERVER často nepředá
+        $header = $this->header('Authorization') ?: (string) ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+        if ($header === '' && function_exists('apache_request_headers')) {
+            $headers = array_change_key_case(apache_request_headers());
+            $header = (string) ($headers['authorization'] ?? '');
+        }
+
+        return preg_match('/^Bearer\s+(\S+)$/i', trim($header), $m) ? $m[1] : '';
+    }
+
+    /** @return array<string, mixed> */
+    public function all(): array
+    {
+        if (str_contains($this->header('Content-Type') ?: (string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'application/json')) {
+            $data = json_decode((string) file_get_contents('php://input'), true);
+
+            return (is_array($data) ? $data : []) + $_GET;
+        }
+
+        return $_POST + $_GET;
+    }
+
+    public function input(string $key, string $default = ''): string
+    {
+        $value = $this->all()[$key] ?? $default;
+
+        return is_scalar($value) ? (string) $value : $default;
+    }
 }

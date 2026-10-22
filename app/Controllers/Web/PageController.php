@@ -112,6 +112,18 @@ final class PageController
     }
 
     /** @param array<string, string> $params */
+    public function appCareer(Request $request, array $params = []): void
+    {
+        $this->page('public.app-career', 'Kariéra | Dartiqo', 'app-body', 'layouts.app');
+    }
+
+    /** @param array<string, string> $params */
+    public function live(Request $request, array $params = []): void
+    {
+        $this->page('public.live', 'Živě | Dartiqo', 'app-body', 'layouts.app');
+    }
+
+    /** @param array<string, string> $params */
     public function profile(Request $request, array $params = []): void
     {
         $this->page('public.profile', 'Profil | Dartiqo', 'app-body', 'layouts.app');
@@ -150,6 +162,13 @@ final class PageController
     /** @param array<string, mixed> $data */
     private function page(string $view, string $title, string $bodyClass = '', string $layout = 'layouts.public', array $data = []): void
     {
+        if ($layout === 'layouts.app' && !auth()->check()) {
+            app()->redirect('/login');
+        }
+        if ($layout === 'layouts.auth' && auth()->check()) {
+            app()->redirect('/app');
+        }
+
         View::render($view, array_merge([
             'title' => $title,
             'bodyClass' => $bodyClass,
