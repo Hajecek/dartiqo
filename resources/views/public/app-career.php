@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../partials/ui.php';
 
+// Kariéra se zatím nesynchronizuje z aplikace
+echo dartiqo_empty_page('Kariéra', 'Tvoje kariéra', 'Kariéra ještě nezačala', 'Postup kariérou se tu ukáže, až budou na webu odehrané zápasy z aplikace.', 'trophy');
+return;
+
 $tiers = [
     ['Amatér', 'Klubové večery', 'done'],
     ['Lokální soutěže', 'Páteční poháry', 'done'],

@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/../partials/ui.php';
+
+// Statistiky se zatím nesynchronizují z aplikace
+echo dartiqo_empty_page('Statistiky', 'Tvoje čísla', 'Zatím žádné statistiky', 'Průměr, zavírání a mapa zásahů se tu ukážou, jakmile začne aplikace posílat odehrané zápasy na web.', 'chart');
+return;
 $dailyAverages = static function (int $days, float $mean, float $rise): array {
     $raw = [];
     for ($i = 0; $i < $days; $i++) {

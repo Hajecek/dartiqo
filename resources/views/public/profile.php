@@ -3,16 +3,17 @@ require_once __DIR__ . '/../partials/ui.php';
 
 $levelRing = 2 * M_PI * 44;
 $stats = [
-    ['Průměr', '56.8', 'celkově'],
-    ['Výhry', '57 %', '64 z 112'],
-    ['Zápasy', '112', 'odehráno'],
-    ['Maximum 180', '22', 'celkem'],
+    ['Průměr', '–', 'celkově'],
+    ['Výhry', '–', '0 z 0'],
+    ['Zápasy', '0', 'odehráno'],
+    ['Maximum 180', '0', 'celkem'],
 ];
+$locked = 'text-zinc-500 bg-white/[.04] ring-white/10';
 $badges = [
-    ['trophy', 'První výhra', 'text-accent bg-accent/10 ring-accent/25'],
-    ['bolt', 'Maximum 180', 'text-orange-300 bg-orange-400/10 ring-orange-400/25'],
-    ['target', 'Zavření 100+', 'text-emerald-300 bg-emerald-400/10 ring-emerald-400/25'],
-    ['flame', '7 dní v řadě', 'text-zinc-500 bg-white/[.04] ring-white/10'],
+    ['trophy', 'První výhra', $locked],
+    ['bolt', 'Maximum 180', $locked],
+    ['target', 'Zavření 100+', $locked],
+    ['flame', '7 dní v řadě', $locked],
 ];
 ?>
 <main class="@container/dash mx-auto w-full max-w-5xl" data-narrow>
@@ -34,14 +35,14 @@ $badges = [
 <span class="-mt-14 grid size-28 shrink-0 place-items-center overflow-hidden rounded-[28px] bg-accent text-4xl font-bold text-black shadow-[0_18px_40px_-14px_#faff00aa] ring-[6px] ring-zinc-900 [&_img]:size-full [&_img]:object-cover" data-player-avatar>A</span>
 <div class="min-w-0 flex-1">
 <strong class="block truncate text-2xl font-semibold tracking-tight" data-player-full>Alex Novák</strong>
-<span class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-zinc-400"><span data-player-user>@alex180</span><span class="size-1 rounded-full bg-zinc-600"></span><span class="chip bg-accent/10 text-accent ring-1 ring-accent/25 ring-inset">Expert</span></span>
+<span class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-zinc-400"><span data-player-user>@alex180</span></span>
 </div>
 <div class="flex items-center gap-4 rounded-2xl bg-white/[.035] py-2.5 pr-5 pl-2.5 ring-1 ring-white/[.06] ring-inset">
 <span class="relative grid size-16 place-items-center">
-<svg class="absolute inset-0 -rotate-90" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgb(255 255 255 / .08)" stroke-width="8"/><circle cx="50" cy="50" r="44" fill="none" stroke="#faff00" stroke-width="8" stroke-linecap="round" stroke-dasharray="<?= e((string) round($levelRing * .64, 2)) ?> <?= e((string) round($levelRing, 2)) ?>"/></svg>
-<b class="num text-xl">12</b>
+<svg class="absolute inset-0 -rotate-90" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgb(255 255 255 / .08)" stroke-width="8"/><circle cx="50" cy="50" r="44" fill="none" stroke="#faff00" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 <?= e((string) round($levelRing, 2)) ?>"/></svg>
+<b class="num text-xl">1</b>
 </span>
-<span><small class="eyebrow block">Level</small><span class="num mt-1 block text-sm">640 <span class="text-zinc-500">/ 1 000 XP</span></span></span>
+<span><small class="eyebrow block">Level</small><span class="num mt-1 block text-sm">0 <span class="text-zinc-500">/ 1 000 XP</span></span></span>
 </div>
 </div>
 <div class="grid grid-cols-2 gap-px border-t border-white/[.06] bg-white/[.06] @2xl/dash:grid-cols-4">

@@ -47,5 +47,6 @@ $router->get('/register/availability', [AuthController::class, 'availability']);
 
 $router->post('/api/v1/auth/login', [ApiAuthController::class, 'login']);
 $router->post('/api/v1/auth/logout', [ApiAuthController::class, 'logout']);
+$router->post('/api/v1/auth/social/{provider}', [ApiAuthController::class, 'social']);
 $router->get('/api/v1/me', [ApiAuthController::class, 'me']);
 $router->post('/api/v1/live-matches/{id}', [LiveMatchController::class, 'update']);

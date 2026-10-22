@@ -30,6 +30,26 @@ final class AuthController extends ApiController
         $this->json(['ok' => true, 'token' => $token, 'user' => UserRepository::toPublic($user)]);
     }
 
+    /**
+     * Přihlášení přes Apple / Google. Aplikace posílá identity token poskytovatele.
+     * Ověření tokenu (JWKS, aud = bundle ID / client ID) a propojení s účtem zatím chybí.
+     *
+     * @param array<string, string> $params
+     */
+    public function social(Request $request, array $params = []): void
+    {
+        $names = ['apple' => 'Apple', 'google' => 'Google'];
+        $provider = $params['provider'] ?? '';
+        if (!isset($names[$provider])) {
+            $this->json(['ok' => false, 'message' => 'Neznámý způsob přihlášení.'], 404);
+        }
+        if (trim($request->input('idToken')) === '') {
+            $this->json(['ok' => false, 'message' => 'Chybí token od poskytovatele.'], 422);
+        }
+
+        $this->json(['ok' => false, 'message' => 'Přihlášení přes ' . $names[$provider] . ' zatím není na serveru zapnuté. Použij e-mail a heslo.'], 501);
+    }
+
     /** @param array<string, string> $params */
     public function logout(Request $request, array $params = []): void
     {

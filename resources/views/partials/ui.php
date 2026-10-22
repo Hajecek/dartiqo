@@ -224,4 +224,22 @@ if (!function_exists('dartiqo_icon')) {
 
         return $days[(int) date('w')] . ' ' . (int) date('j') . '. ' . $months[(int) date('n') - 1];
     }
+
+    /** Celá stránka bez dat: nadpis a výzva odehrát první zápas v aplikaci. */
+    function dartiqo_empty_page(string $eyebrow, string $title, string $heading, string $text, string $icon = 'target'): string
+    {
+        return '<main class="mx-auto w-full max-w-5xl">'
+            . '<header class="mb-8"><p class="eyebrow">' . e($eyebrow) . '</p><h1 class="mt-2">' . e($title) . '<span class="text-accent">.</span></h1></header>'
+            . dartiqo_empty_panel($heading, $text, $icon)
+            . '</main>';
+    }
+
+    function dartiqo_empty_panel(string $heading, string $text, string $icon = 'target'): string
+    {
+        return '<section class="panel flex flex-col items-center gap-4 py-14! text-center">'
+            . '<span class="grid size-16 place-items-center rounded-3xl bg-accent/10 text-accent ring-1 ring-accent/25 ring-inset [&_svg]:size-7">' . dartiqo_i($icon) . '</span>'
+            . '<h2>' . e($heading) . '</h2>'
+            . '<p class="max-w-md text-sm text-zinc-400">' . e($text) . '</p>'
+            . '</section>';
+    }
 }

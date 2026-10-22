@@ -2,6 +2,10 @@
 require __DIR__ . '/../partials/player-games.php';
 require_once __DIR__ . '/../partials/ui.php';
 
+// Odehrané zápasy se zatím nesynchronizují z aplikace
+echo dartiqo_empty_page('Historie', 'Moje hry', 'Zatím žádné hry', 'Dohrané zápasy a tréninky z aplikace se tu objeví, až se začnou synchronizovat. Rozehraný zápas už teď sleduješ živě v Přehledu.', 'clock');
+return;
+
 $matchId = (string) ($matchId ?? '');
 $games = dartiqo_games();
 $game = $matchId !== '' ? dartiqo_game($matchId) : null;
