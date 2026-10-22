@@ -221,6 +221,9 @@ $minutes = static function (int $m): string {
     return $h . ' h ' . str_pad((string) $min, 2, '0', STR_PAD_LEFT) . ' min';
 };
 $timeTotal = array_sum(array_column($active['time'], 1));
+$timeDaily = (int) round($timeTotal / max(1, count($active['chart'])));
+$timeTop = array_reduce($active['time'], static fn (?array $top, array $row): array => $top === null || $row[1] > $top[1] ? $row : $top);
+$timeShare = static fn (int $m): int => $timeTotal ? (int) round($m / $timeTotal * 100) : 0;
 ?>
 <main class="@container/dash mx-auto w-full max-w-7xl">
 <header class="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -331,25 +334,28 @@ $timeTotal = array_sum(array_column($active['time'], 1));
 </article>
 </div>
 
-<div class="grid items-start gap-4 @5xl/dash:grid-cols-2">
-<article class="panel">
-<div class="mb-4">
-<h3>Podle doublu</h3>
-<p id="co-meta" class="mt-1 text-xs text-zinc-500"><?= e((string) $closing['count']) ?> zavření · nejvyšší <?= e((string) $closing['highest']) ?> · průměrné <?= e((string) $closing['average']) ?></p>
+<div class="grid gap-4 @5xl/dash:grid-cols-2">
+<article class="panel flex flex-col">
+<div class="mb-4 flex items-start justify-between gap-3"><div><h3>Podle doublu</h3><p id="co-meta" class="mt-1 text-xs text-zinc-500"><?= e((string) $closing['count']) ?> zavření · nejvyšší <?= e((string) $closing['highest']) ?> · Ø <?= e((string) $closing['average']) ?></p></div><span id="co-total" class="chip bg-white/[.06] text-zinc-300"><?= e((string) $closing['attempts']) ?> pokusů</span></div>
+<div class="flex flex-1 flex-col gap-1.5" id="co-list">
+<?php foreach ($closing['doubles'] as [$name, $hits, $attempts]):
+    $pct = $attempts ? (int) round($hits / $attempts * 100) : 0;
+    [$fill, $ink] = $name === $closing['best'][0] ? ['#4ade80', 'text-emerald-300'] : ($name === $closing['worst'][0] ? ['#fb7185', 'text-rose-300'] : ['#faff00', 'text-zinc-100']);
+?>
+<div class="tile flex items-center gap-3 px-3 py-2"><strong class="num w-9 shrink-0 text-sm"><?= e($name) ?></strong><div class="meter flex-1"><i style="width:<?= e((string) $pct) ?>%;background:<?= e($fill) ?>"></i></div><small class="num w-11 shrink-0 text-right text-[11px] text-zinc-500"><?= e((string) $hits) ?>/<?= e((string) $attempts) ?></small><b class="num w-12 shrink-0 text-right text-sm whitespace-nowrap <?= e($ink) ?>"><?= e((string) $pct) ?> %</b></div>
+<?php endforeach; ?>
 </div>
-<div class="relative mt-1" id="co-chart-box" style="height:14rem">
-<canvas id="co-chart" role="img" aria-label="Úspěšnost podle doublu"></canvas>
-</div>
-<div class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4" id="co-ranges">
+<p class="mt-5 mb-2 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">Zavření podle zbytku</p>
+<div class="grid grid-cols-4 gap-2" id="co-ranges">
 <?php foreach ($closing['ranges'] as [$label, $count]): ?>
-<div class="tile px-3 py-2.5"><strong class="num block text-xl"><?= e((string) $count) ?></strong><span class="text-[10px] tracking-wide text-zinc-500 uppercase"><?= e($label) ?></span></div>
+<div class="tile px-2 py-2 text-center"><strong class="num block text-lg"><?= e((string) $count) ?></strong><span class="mt-0.5 block text-[10px] text-zinc-400"><?= e($label) ?></span></div>
 <?php endforeach; ?>
 </div>
 </article>
-<article class="panel">
+<article class="panel flex flex-col">
 <div class="mb-4 flex items-start justify-between gap-3"><div><h3>Skórování</h3><p class="mt-1 text-xs text-zinc-500">Rozložení kol ve zvoleném období.</p></div><span id="score-total" class="chip bg-white/[.06] text-zinc-300"><?= e((string) $bandTotal) ?> kol</span></div>
-<div class="relative" style="height:16rem">
-<canvas id="score-chart" role="img" aria-label="Rozložení kol podle skóre"></canvas>
+<div class="relative min-h-64 flex-1">
+<div class="absolute inset-0"><canvas id="score-chart" role="img" aria-label="Rozložení kol podle skóre"></canvas></div>
 </div>
 <div class="mt-4 grid grid-cols-4 gap-2" id="score-grid">
 <?php foreach ($active['bands'] as [$label, $count, $color]): ?>
@@ -360,54 +366,68 @@ $timeTotal = array_sum(array_column($active['time'], 1));
 </div>
 
 <div class="grid gap-4 @4xl/dash:grid-cols-2">
-<article class="panel bg-[#11151d]/80!">
-<div class="mb-2 flex items-start justify-between gap-3">
-<div><span class="eyebrow">Nejmíň</span><strong id="aim-min" class="num mt-1 block text-2xl text-zinc-100">0,0 %</strong></div>
-<div class="text-right"><span class="eyebrow text-[#e8b03d]/80">Nejvíc</span><strong id="aim-max" class="num mt-1 block text-2xl text-[#e8b03d]">0 %</strong></div>
+<article class="panel">
+<div class="mb-4 flex items-start justify-between gap-3">
+<div><p class="eyebrow">Heatmapa</p><h3 class="mt-1">Podíl zásahů</h3><p class="mt-1 text-xs text-zinc-500">Čím světlejší pole, tím častěji ho trefuješ.</p></div>
 </div>
 <div id="aim-chart"></div>
-<div class="mt-3 flex items-center justify-between gap-3">
-<h3>Podíl zásahů</h3>
-<span class="chip bg-white/[.06] text-zinc-300">Bull <b id="aim-bull" class="text-zinc-100">0 %</b></span>
+<div class="mt-4 flex items-center gap-3 text-[11px] text-zinc-500"><span>Méně</span><span class="h-1.5 flex-1 rounded-full bg-[linear-gradient(90deg,#221e1e,#5c2616,#d65c12,#fac800,#faff00,#feffd6)]"></span><span>Více</span></div>
+<div class="mt-4 grid grid-cols-3 gap-2">
+<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Nejméně</span><strong id="aim-min" class="num mt-1 block text-xl">0,0 %</strong></div>
+<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Nejvíce</span><strong id="aim-max" class="num mt-1 block text-xl text-accent">0 %</strong></div>
+<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Bull</span><strong id="aim-bull" class="num mt-1 block text-xl">0 %</strong></div>
 </div>
-<div class="mt-3 flex flex-wrap gap-3 text-[11px] font-medium text-zinc-400 [&_i]:mr-1.5 [&_i]:inline-block [&_i]:size-2 [&_i]:rounded-full">
-<span><i style="background:#fce06b"></i>Single</span>
-<span><i style="background:#d6851f"></i>Double</span>
-<span><i style="background:#66330d"></i>Triple</span>
-</div>
-<p id="aim-detail" class="mt-3 text-xs text-zinc-500" aria-live="polite">Plocha je single, tmavý pruh triple a okraj double. Klepni na výseč pro počty.</p>
+<div id="aim-detail" class="tile mt-2 p-4 text-xs text-zinc-500" aria-live="polite">Klepni na číslo na terči pro počty.</div>
+<h3 class="mt-6">Rozložení zásahů</h3>
+<div class="mt-3 flex flex-col gap-2.5" id="map-shares"></div>
 </article>
 <article class="panel">
 <div class="mb-4 flex items-start justify-between gap-3">
-<div>
-<h3>Mapa dopadů</h3>
-<p class="mt-1 text-xs text-zinc-500">Přesná místa na terči, jako v aplikaci.</p>
-</div>
-<div class="seg p-0.5">
+<div><p class="eyebrow">Mapa dopadů</p><h3 class="mt-1">Kam šipky padají</h3><p class="mt-1 text-xs text-zinc-500">Tečky jsou hody. Žlutě je číslo, kam míříš nejčastěji, a vedle něj vidíš, kolik šipek uletí do stran.</p></div>
+<div class="seg shrink-0 p-0.5">
 <button class="w-8 justify-center px-0! text-base" type="button" data-heat-zoom="-0.35" aria-label="Oddálit mapu">−</button>
 <button class="w-8 justify-center px-0! text-base" type="button" data-heat-zoom="0.35" aria-label="Přiblížit mapu">+</button>
 </div>
 </div>
-<div class="rounded-3xl bg-black p-2 ring-1 ring-white/[.06] ring-inset">
+<div class="overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_50%_45%,#18181c,#09090b_70%)] p-4 ring-1 ring-white/[.06] ring-inset">
 <svg id="heat-board" class="mx-auto aspect-square w-full" viewBox="0 0 500 500" role="img" aria-label="Mapa dopadů šipek na terči"></svg>
 </div>
-<p class="mt-3 text-xs text-zinc-500">Každá tečka je jeden hod. Přibliž si segment tlačítky + a −.</p>
-<div class="mt-4 flex flex-col gap-2.5" id="map-shares"></div>
+<div class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-zinc-400">
+<span class="inline-flex items-center gap-1.5"><i class="size-2 rounded-full bg-zinc-50 ring-2 ring-black"></i>Hod</span>
+<span class="inline-flex items-center gap-1.5"><i class="h-1.5 w-6 rounded-full bg-[linear-gradient(90deg,#ff4800,#ffc400,#faff00,#ffffe6)]"></i>Hustota</span>
+<span class="inline-flex items-center gap-1.5"><i class="size-3 rounded-[3px] border-2 border-accent"></i>Hlavní cíl</span>
+<span class="inline-flex items-center gap-1.5"><i class="size-3 rounded-[3px] border border-dashed border-zinc-300"></i>Sousední čísla</span>
+</div>
+<div class="mt-4 flex flex-col gap-2" id="heat-stats"></div>
 <h3 class="mt-6">Nejčastější pole</h3>
-<div class="mt-3 grid grid-cols-2 gap-2" id="map-fields"></div>
+<div class="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-flow-col sm:grid-cols-2 sm:grid-rows-3" id="map-fields"></div>
 </article>
 </div>
 
 <article class="panel">
-<div class="mb-5 flex items-center justify-between gap-3"><div><p class="eyebrow">Čas u terče</p><h3 class="mt-1">Jak hraješ</h3></div><span id="time-total" class="chip bg-white/[.06] text-zinc-300"><?= e($minutes($timeTotal)) ?></span></div>
-<div class="grid items-center gap-6 sm:grid-cols-[12rem_1fr]">
-<div class="relative mx-auto w-full" style="height:12rem;max-width:12rem">
-<canvas id="time-chart" role="img" aria-label="Čas u terče podle způsobu hry"></canvas>
+<span class="pointer-events-none absolute -right-20 -bottom-24 size-72 rounded-full bg-accent/[.06] blur-3xl" aria-hidden="true"></span>
+<div class="relative mb-6 flex flex-wrap items-start justify-between gap-3">
+<div><p class="eyebrow">Čas u terče</p><h3 class="mt-1">Jak hraješ</h3><p class="mt-1 text-xs text-zinc-500">Kolik času trávíš sám, s botem a s kamarády.</p></div>
+<span class="chip bg-white/[.06] text-zinc-300">Ø <b id="time-daily" class="text-zinc-100"><?= e($minutes($timeDaily)) ?></b> denně</span>
 </div>
-<div class="grid gap-2 text-sm text-zinc-300 sm:grid-cols-3 [&>span]:flex [&>span]:items-center [&>span]:justify-between [&>span]:gap-3 [&>span]:rounded-2xl [&>span]:bg-white/[.035] [&>span]:px-4 [&>span]:py-3 [&>span]:ring-1 [&>span]:ring-white/[.06] [&>span]:ring-inset [&_i]:mr-2 [&_i]:inline-block [&_i]:size-2.5 [&_i]:rounded-full [&_b]:font-display [&_b]:font-semibold [&_b]:text-white [&_b]:tabular-nums" id="time-legend">
-<?php foreach ($active['time'] as [$label, $mins, $color]): ?>
-<span><span class="flex items-center"><i style="background:<?= e($color) ?>"></i><?= e($label) ?></span><b><?= e($minutes($mins)) ?></b></span>
+<div class="relative grid items-center gap-6 @3xl/dash:grid-cols-[13rem_1fr] @3xl/dash:gap-10">
+<div class="relative mx-auto size-52">
+<canvas id="time-chart" role="img" aria-label="Čas u terče podle způsobu hry"></canvas>
+<div class="pointer-events-none absolute inset-0 grid place-content-center text-center">
+<strong id="time-total" class="num text-xl leading-none"><?= e($minutes($timeTotal)) ?></strong>
+<span class="mt-1.5 text-[10px] tracking-widest text-zinc-500 uppercase">celkem</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2" id="time-legend">
+<?php foreach ($active['time'] as [$label, $mins, $color]): $share = $timeShare($mins); ?>
+<div class="tile px-4 py-3">
+<div class="flex items-center justify-between gap-3 text-sm"><span class="flex items-center gap-2.5 text-zinc-300"><i class="size-2.5 rounded-full" style="background:<?= e($color) ?>"></i><?= e($label) ?></span><span class="flex items-baseline gap-3"><b class="num text-white"><?= e($minutes($mins)) ?></b><small class="num w-9 text-right text-xs text-zinc-500"><?= e((string) $share) ?> %</small></span></div>
+<div class="meter mt-2.5"><i style="width:<?= e((string) $share) ?>%;background:<?= e($color) ?>"></i></div>
+</div>
 <?php endforeach; ?>
+</div>
+<p id="time-note" class="px-1 pt-1 text-xs text-zinc-500">Nejvíc času trávíš <b class="text-zinc-200"><?= e(mb_strtolower($timeTop[0])) ?></b> – <?= e((string) $timeShare($timeTop[1])) ?> % z celku.</p>
 </div>
 </div>
 </article>

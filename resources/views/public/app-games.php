@@ -212,40 +212,41 @@ $verdict = match ($game['result']) {
 </article>
 
 <div class="mt-4 grid gap-4 @4xl/dash:grid-cols-2">
-<article class="panel bg-[#11151d]/80!">
-<div class="mb-2 flex items-start justify-between gap-3">
-<div><span class="eyebrow">Nejmíň</span><strong id="aim-min" class="num mt-1 block text-2xl text-zinc-100">0,0 %</strong></div>
-<div class="text-right"><span class="eyebrow text-[#e8b03d]/80">Nejvíc</span><strong id="aim-max" class="num mt-1 block text-2xl text-[#e8b03d]">0 %</strong></div>
+<article class="panel">
+<div class="mb-4 flex items-start justify-between gap-3">
+<div><p class="eyebrow">Heatmapa</p><h3 class="mt-1">Podíl zásahů</h3><p class="mt-1 text-xs text-zinc-500">Čím světlejší pole, tím častěji ho trefuješ.</p></div>
 </div>
 <div id="aim-chart"></div>
-<div class="mt-3 flex items-center justify-between gap-3">
-<h3>Podíl zásahů</h3>
-<span class="chip bg-white/[.06] text-zinc-300">Bull <b id="aim-bull" class="text-zinc-100">0 %</b></span>
+<div class="mt-4 flex items-center gap-3 text-[11px] text-zinc-500"><span>Méně</span><span class="h-1.5 flex-1 rounded-full bg-[linear-gradient(90deg,#221e1e,#5c2616,#d65c12,#fac800,#faff00,#feffd6)]"></span><span>Více</span></div>
+<div class="mt-4 grid grid-cols-3 gap-2">
+<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Nejméně</span><strong id="aim-min" class="num mt-1 block text-xl">0,0 %</strong></div>
+<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Nejvíce</span><strong id="aim-max" class="num mt-1 block text-xl text-accent">0 %</strong></div>
+<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Bull</span><strong id="aim-bull" class="num mt-1 block text-xl">0 %</strong></div>
 </div>
-<div class="mt-3 flex flex-wrap gap-3 text-[11px] font-medium text-zinc-400 [&_i]:mr-1.5 [&_i]:inline-block [&_i]:size-2 [&_i]:rounded-full">
-<span><i style="background:#fce06b"></i>Single</span>
-<span><i style="background:#d6851f"></i>Double</span>
-<span><i style="background:#66330d"></i>Triple</span>
-</div>
-<p id="aim-detail" class="mt-3 text-xs text-zinc-500" aria-live="polite">Klepni na výseč pro počty v tomhle zápase.</p>
+<div id="aim-detail" class="tile mt-2 p-4 text-xs text-zinc-500" aria-live="polite">Klepni na číslo na terči pro počty v tomhle zápase.</div>
+<h3 class="mt-6">Rozložení zásahů</h3>
+<div class="mt-3 flex flex-col gap-2.5" id="map-shares"></div>
 </article>
 <article class="panel">
 <div class="mb-4 flex items-start justify-between gap-3">
-<div>
-<h3>Mapa dopadů</h3>
-<p class="mt-1 text-xs text-zinc-500">Každá tečka je hod z téhle hry.</p>
-</div>
-<div class="seg p-0.5">
+<div><p class="eyebrow">Mapa dopadů</p><h3 class="mt-1">Kam šipky padají</h3><p class="mt-1 text-xs text-zinc-500">Tečky jsou hody. Žlutě je číslo, kam míříš nejčastěji, a vedle něj vidíš, kolik šipek uletí do stran.</p></div>
+<div class="seg shrink-0 p-0.5">
 <button class="w-8 justify-center px-0! text-base" type="button" data-heat-zoom="-0.35" aria-label="Oddálit mapu">−</button>
 <button class="w-8 justify-center px-0! text-base" type="button" data-heat-zoom="0.35" aria-label="Přiblížit mapu">+</button>
 </div>
 </div>
-<div class="rounded-3xl bg-black p-2 ring-1 ring-white/[.06] ring-inset">
+<div class="overflow-hidden rounded-3xl bg-[radial-gradient(circle_at_50%_45%,#18181c,#09090b_70%)] p-4 ring-1 ring-white/[.06] ring-inset">
 <svg id="heat-board" class="mx-auto aspect-square w-full" viewBox="0 0 500 500" role="img" aria-label="Mapa dopadů šipek v zápase"></svg>
 </div>
-<div class="mt-4 flex flex-col gap-2.5" id="map-shares"></div>
+<div class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-zinc-400">
+<span class="inline-flex items-center gap-1.5"><i class="size-2 rounded-full bg-zinc-50 ring-2 ring-black"></i>Hod</span>
+<span class="inline-flex items-center gap-1.5"><i class="h-1.5 w-6 rounded-full bg-[linear-gradient(90deg,#ff4800,#ffc400,#faff00,#ffffe6)]"></i>Hustota</span>
+<span class="inline-flex items-center gap-1.5"><i class="size-3 rounded-[3px] border-2 border-accent"></i>Hlavní cíl</span>
+<span class="inline-flex items-center gap-1.5"><i class="size-3 rounded-[3px] border border-dashed border-zinc-300"></i>Sousední čísla</span>
+</div>
+<div class="mt-4 flex flex-col gap-2" id="heat-stats"></div>
 <h3 class="mt-6">Nejčastější pole</h3>
-<div class="mt-3 grid grid-cols-2 gap-2" id="map-fields"></div>
+<div class="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-flow-col sm:grid-cols-2 sm:grid-rows-3" id="map-fields"></div>
 </article>
 </div>
 <p class="mt-6 text-xs text-zinc-600">Ukázkový detail zápasu. Čísla, heatmapa i soupeř jsou modelové.</p>

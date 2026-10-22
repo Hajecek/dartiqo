@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @source "../assets/js/app.js";
+@source "../assets/js/board.js";
 @source "../resources/views";
 
 @custom-variant home (&:is(.is-home, .is-home *));
