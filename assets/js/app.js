@@ -106,7 +106,7 @@ if(dashNode){
     const tooltip={displayColors:false,callbacks:{label:c=>avg(c.parsed.y)}};
     const fill=ctx=>{const box=ctx.chart.chartArea;if(!box)return 'rgba(74,222,128,.28)';const g=ctx.chart.ctx.createLinearGradient(0,box.top,0,box.bottom);g.addColorStop(0,'rgba(74,222,128,.45)');g.addColorStop(1,'rgba(74,222,128,0)');return g};
     if(trendKind==='bar'){
-      mountChart('trend',canvas,{type:'bar',data:{labels,datasets:[{data:list,backgroundColor:'#4ade80',hoverBackgroundColor:'#86efac',borderRadius:list.length>20?2:6,borderSkipped:false,maxBarThickness:42}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip},scales}});
+      mountChart('trend',canvas,{type:'bar',data:{labels,datasets:[{data:list,backgroundColor:list.map((_,i)=>i===list.length-1?'#4ade80':'rgba(74,222,128,.38)'),hoverBackgroundColor:'#86efac',borderRadius:list.length>20?4:8,borderSkipped:false,maxBarThickness:42}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip},scales}});
       return;
     }
     mountChart('trend',canvas,{type:'line',data:{labels,datasets:[{data:list,borderColor:'#4ade80',backgroundColor:trendKind==='area'?fill:'transparent',fill:trendKind==='area',tension:.35,borderWidth:2.5,pointRadius:list.length>16?0:3.5,pointHoverRadius:5,pointHitRadius:10,pointBackgroundColor:'#18181b',pointBorderColor:'#4ade80',pointBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip},scales}});
@@ -114,7 +114,7 @@ if(dashNode){
   const paintBands=bands=>{
     const rows=bands||[],total=rows.reduce((s,b)=>s+(+b[1]||0),0)||1;
     if($('#score-total'))$('#score-total').textContent=total+' kol';
-    if($('#score-grid'))$('#score-grid').innerHTML=rows.map(b=>`<div class="rounded-xl bg-white/5 px-2 py-2 text-center"><strong class="block font-display text-lg">${b[1]}</strong><span class="mt-1 inline-flex items-center gap-1 text-[10px] text-zinc-400"><i class="inline-block size-1.5 rounded-full" style="background:${b[2]}"></i>${escapeHtml(b[0])}</span></div>`).join('');
+    if($('#score-grid'))$('#score-grid').innerHTML=rows.map(b=>`<div class="tile px-2 py-2 text-center"><strong class="num block text-lg">${b[1]}</strong><span class="mt-0.5 inline-flex items-center gap-1 text-[10px] text-zinc-400"><i class="inline-block size-1.5 rounded-full" style="background:${b[2]}"></i>${escapeHtml(b[0])}</span></div>`).join('');
     mountChart('score',$('#score-chart'),{type:'bar',data:{labels:rows.map(b=>b[0]),datasets:[{data:rows.map(b=>+b[1]||0),backgroundColor:rows.map(b=>b[2]),borderRadius:6,borderSkipped:false,barThickness:14}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{displayColors:false,callbacks:{label:c=>{const n=+c.raw||0;return n+' kol · '+Math.round(n/total*100)+' %'}}}},scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#71717a',font:{size:10},precision:0},border:{display:false}},y:{grid:{display:false},ticks:{color:'#e4e4e7',font:{size:11}},border:{display:false}}}}});
   };
   const paintFocus=p=>{
@@ -125,16 +125,16 @@ if(dashNode){
     if($('#co-bar'))$('#co-bar').style.width=c.rate+'%';
     const extreme=(title,row,kind)=>{
       const rate=row[2]?Math.round(row[1]/row[2]*100):0;
-      const box=kind==='best'?'border-emerald-400/35 bg-emerald-400/10':'border-rose-400/35 bg-rose-400/10';
+      const box=kind==='best'?'bg-emerald-400/[.07] ring-emerald-400/25':'bg-rose-400/[.07] ring-rose-400/25';
       const ink=kind==='best'?'text-emerald-300':'text-rose-300';
-      return `<div class="rounded-2xl border p-3 ${box}"><span class="text-[10px] font-bold uppercase tracking-widest ${ink}">${title}</span><div class="mt-1 flex items-end justify-between gap-2"><strong class="font-display text-2xl">${escapeHtml(row[0])}</strong><b class="${ink}">${rate} %</b></div><small class="text-xs text-zinc-400">${row[1]} z ${row[2]} pokusů</small></div>`;
+      return `<div class="rounded-2xl p-4 ring-1 ring-inset ${box}"><span class="text-[10px] font-semibold uppercase tracking-widest ${ink}">${title}</span><div class="mt-1 flex items-end justify-between gap-2"><strong class="num text-2xl">${escapeHtml(row[0])}</strong><b class="num ${ink}">${rate} %</b></div><small class="text-xs text-zinc-500">${row[1]} z ${row[2]} pokusů</small></div>`;
     };
     if($('#co-extremes'))$('#co-extremes').innerHTML=extreme('Nejlepší double',c.best,'best')+extreme('Nejslabší double',c.worst,'worst');
     const doubles=c.doubles||[];
     const coBox=$('#co-chart-box');
     if(coBox)coBox.style.height=Math.max(9,doubles.length*2.15)+'rem';
     mountChart('co',$('#co-chart'),{type:'bar',data:{labels:doubles.map(r=>r[0]),datasets:[{data:doubles.map(r=>r[2]?Math.round(r[1]/r[2]*100):0),backgroundColor:doubles.map(r=>r[0]===c.best[0]?'#4ade80':r[0]===c.worst[0]?'#fb7185':'#faff00'),borderRadius:6,borderSkipped:false,barThickness:12}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{displayColors:false,callbacks:{label:item=>{const row=doubles[item.dataIndex];return row[1]+' z '+row[2]+' · '+item.parsed.x+' %'}}}},scales:{x:{beginAtZero:true,max:100,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#71717a',font:{size:10},callback:v=>v+' %'},border:{display:false}},y:{grid:{display:false},ticks:{color:'#fafafa',font:{size:12,weight:'700'}},border:{display:false}}}}});
-    if($('#co-ranges'))$('#co-ranges').innerHTML=(c.ranges||[]).map(r=>`<div class="rounded-xl bg-white/5 px-3 py-2"><strong class="block font-display text-xl">${r[1]}</strong><span class="text-[10px] uppercase tracking-wide text-zinc-500">${escapeHtml(r[0])}</span></div>`).join('');
+    if($('#co-ranges'))$('#co-ranges').innerHTML=(c.ranges||[]).map(r=>`<div class="tile px-3 py-2.5"><strong class="num block text-xl">${r[1]}</strong><span class="text-[10px] uppercase tracking-wide text-zinc-500">${escapeHtml(r[0])}</span></div>`).join('');
     if($('#co-meta'))$('#co-meta').textContent=`${c.count} zavření · nejvyšší ${c.highest} · průměrné ${c.average}`;
     if($('#win-rate'))$('#win-rate').textContent=w.rate+' %';
     if($('#win-ratio'))$('#win-ratio').textContent=`${w.won} z ${w.played} zápasů`;
@@ -142,7 +142,10 @@ if(dashNode){
     if($('#win-won'))$('#win-won').textContent=w.won;
     if($('#win-lost'))$('#win-lost').textContent=Math.max(0,w.played-w.won);
     if($('#win-played'))$('#win-played').textContent=w.played;
-    if($('#win-form'))$('#win-form').innerHTML=(w.form||[]).map(on=>`<i class="grid size-7 place-items-center rounded-full text-[10px] font-bold ${on?'bg-emerald-400 text-black':'bg-white/10 text-zinc-500'}">${on?'V':'P'}</i>`).join('');
+    if($('#hero-win'))$('#hero-win').textContent=w.rate+' %';
+    if($('#hero-co'))$('#hero-co').textContent=c.rate+' %';
+    if($('#hero-played'))$('#hero-played').textContent=w.played;
+    if($('#win-form'))$('#win-form').innerHTML=(w.form||[]).map(on=>`<i class="grid size-8 place-items-center rounded-lg text-[11px] font-bold not-italic ${on?'bg-emerald-400/90 text-black':'bg-white/[.06] text-zinc-500'}">${on?'V':'P'}</i>`).join('');
   };
   const paintShares=(board,misses)=>{
     const segs=board.segments||{};
@@ -151,7 +154,7 @@ if(dashNode){
     const bull=(board.bull||[0,0]).reduce((s,n)=>s+(+n||0),0);
     const rows=[['Triple',triple,'#f24747'],['Double',double,'#4ade80'],['Single',single,'#5b86e5'],['Bull',bull,'#f5a524'],['Vedle',+misses||0,'#8e8e93']];
     const total=rows.reduce((s,r)=>s+r[1],0)||1;
-    if($('#map-shares'))$('#map-shares').innerHTML=rows.map(r=>{const rate=Math.round(r[1]/total*100);return `<div class="grid grid-cols-[4.2rem_1fr_2.6rem] items-center gap-3 text-sm"><span>${r[0]}</span><span class="block h-2 overflow-hidden rounded-full bg-white/10"><i class="block h-full rounded-full" style="width:${rate}%;background:${r[2]}"></i></span><b class="text-right">${rate} %</b></div>`}).join('');
+    if($('#map-shares'))$('#map-shares').innerHTML=rows.map(r=>{const rate=Math.round(r[1]/total*100);return `<div class="grid grid-cols-[4.2rem_1fr_2.6rem] items-center gap-3 text-sm"><span class="text-zinc-400">${r[0]}</span><span class="block h-1.5 overflow-hidden rounded-full bg-white/[.07]"><i class="block h-full rounded-full" style="width:${rate}%;background:${r[2]}"></i></span><b class="num text-right">${rate} %</b></div>`}).join('');
     const fields=[];
     boardNums.forEach(n=>{const row=segs[n]||[0,0,0];if(row[0])fields.push(['S'+n,+row[0]]);if(row[1])fields.push(['D'+n,+row[1]]);if(row[2])fields.push(['T'+n,+row[2]])});
     const bullRow=board.bull||[0,0];
@@ -159,7 +162,7 @@ if(dashNode){
     if(bullRow[1])fields.push(['BULL',+bullRow[1]]);
     if(misses)fields.push(['Vedle',+misses]);
     fields.sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0]),'cs'));
-    if($('#map-fields'))$('#map-fields').innerHTML=fields.slice(0,8).map(f=>`<div class="flex items-center justify-between rounded-2xl border border-white/10 bg-zinc-950/40 px-3 py-2 text-sm"><strong>${escapeHtml(String(f[0]))}</strong><span class="text-zinc-400">${f[1]}×</span></div>`).join('');
+    if($('#map-fields'))$('#map-fields').innerHTML=fields.slice(0,8).map(f=>`<div class="tile flex items-center justify-between px-3 py-2.5 text-sm"><strong class="num">${escapeHtml(String(f[0]))}</strong><span class="text-zinc-500 tabular-nums">${f[1]}×</span></div>`).join('');
   };
   const paintAim=board=>{
     const segs=board.segments||{};
@@ -259,14 +262,14 @@ if(dashNode){
     paintChart(p.chart);
     paintFocus(p);
     paintBands(p.bands);
-    $('#kpi-grid').innerHTML=p.kpis.map(([label,value,detail])=>`<article class="rounded-2xl border border-white/10 bg-zinc-900 p-4 [&_span]:text-[10px] [&_span]:uppercase [&_span]:tracking-widest [&_span]:text-zinc-400 [&_strong]:mt-2 [&_strong]:block [&_strong]:font-display [&_strong]:text-2xl [&_small]:text-xs [&_small]:text-zinc-500"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(detail)}</small></article>`).join('');
+    $('#kpi-grid').innerHTML=p.kpis.map(([label,value,detail])=>`<article class="panel p-4! sm:p-5!"><span class="eyebrow tracking-[.12em]">${escapeHtml(label)}</span><strong class="num mt-3 block text-3xl leading-none">${escapeHtml(value)}</strong><small class="mt-2 block text-xs text-zinc-500">${escapeHtml(detail)}</small></article>`).join('');
     currentBoard=p.board||null;
     aimPick=null;
     if(currentBoard){paintAim(currentBoard);paintHeat(currentBoard,name);paintShares(currentBoard,p.misses||0)}
     const timeSum=p.time.reduce((s,t)=>s+t[1],0);
     $('#time-total').textContent=minutes(timeSum);
-    mountChart('time',$('#time-chart'),{type:'doughnut',data:{labels:p.time.map(t=>t[0]),datasets:[{data:p.time.map(t=>t[1]),backgroundColor:p.time.map(t=>t[2]),borderColor:'#18181b',borderWidth:3,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+' · '+minutes(+c.raw||0)}}}}});
-    $('#time-legend').innerHTML=p.time.map(t=>`<span><i style="background:${t[2]}"></i>${escapeHtml(t[0])}<b>${minutes(t[1])}</b></span>`).join('');
+    mountChart('time',$('#time-chart'),{type:'doughnut',data:{labels:p.time.map(t=>t[0]),datasets:[{data:p.time.map(t=>t[1]),backgroundColor:p.time.map(t=>t[2]),borderColor:'#141416',borderWidth:3,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+' · '+minutes(+c.raw||0)}}}}});
+    $('#time-legend').innerHTML=p.time.map(t=>`<span><span class="flex items-center"><i style="background:${t[2]}"></i>${escapeHtml(t[0])}</span><b>${minutes(t[1])}</b></span>`).join('');
     $$('[data-period]').forEach(b=>b.classList.toggle('active',b.dataset.period===name));
     paintGames();
   };
@@ -329,7 +332,7 @@ if(matchNode&&typeof DartBoard!=='undefined'){
   const bands=match.bands||[];
   const total=bands.reduce((s,b)=>s+(+b[1]||0),0);
   if($('#score-total'))$('#score-total').textContent=total+' '+(match.unit||'kol');
-  if($('#score-grid'))$('#score-grid').innerHTML=bands.map(b=>`<div class="rounded-xl bg-white/5 px-2 py-2 text-center"><strong class="block font-display text-lg">${b[1]}</strong><span class="mt-1 inline-flex items-center gap-1 text-[10px] text-zinc-400"><i class="inline-block size-1.5 rounded-full" style="background:${b[2]}"></i>${escapeHtml(b[0])}</span></div>`).join('');
+  if($('#score-grid'))$('#score-grid').innerHTML=bands.map(b=>`<div class="tile px-2 py-2 text-center"><strong class="num block text-lg">${b[1]}</strong><span class="mt-0.5 inline-flex items-center gap-1 text-[10px] text-zinc-400"><i class="inline-block size-1.5 rounded-full" style="background:${b[2]}"></i>${escapeHtml(b[0])}</span></div>`).join('');
   if($('#score-chart')&&typeof Chart!=='undefined'&&bands.length){
     const sum=total||1;
     new Chart($('#score-chart'),{type:'bar',data:{labels:bands.map(b=>b[0]),datasets:[{data:bands.map(b=>+b[1]||0),backgroundColor:bands.map(b=>b[2]),borderRadius:6,borderSkipped:false,barThickness:14}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{displayColors:false,callbacks:{label:c=>{const n=+c.raw||0;return n+' · '+Math.round(n/sum*100)+' %'}}}},scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#71717a',font:{size:10},precision:0},border:{display:false}},y:{grid:{display:false},ticks:{color:'#e4e4e7',font:{size:11}},border:{display:false}}}}});

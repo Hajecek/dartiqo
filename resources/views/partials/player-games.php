@@ -494,7 +494,7 @@ if (!function_exists('dartiqo_games')) {
         return null;
     }
 
-    /** @return array{mark:string,tile:string,text:string,bar:string,wash:string} */
+    /** @return array{mark:string,tile:string,soft:string,text:string,bar:string,wash:string} */
     function dartiqo_result(string $result): array
     {
         return match ($result) {
@@ -504,6 +504,7 @@ if (!function_exists('dartiqo_games')) {
                 'text' => 'text-emerald-300',
                 'bar' => 'bg-emerald-400',
                 'wash' => 'from-emerald-400/20',
+                'soft' => 'bg-emerald-400/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/25',
             ],
             'loss' => [
                 'mark' => 'P',
@@ -511,6 +512,7 @@ if (!function_exists('dartiqo_games')) {
                 'text' => 'text-rose-300',
                 'bar' => 'bg-rose-400',
                 'wash' => 'from-rose-400/20',
+                'soft' => 'bg-rose-400/10 text-rose-300 ring-1 ring-inset ring-rose-400/25',
             ],
             'draw' => [
                 'mark' => 'R',
@@ -518,6 +520,7 @@ if (!function_exists('dartiqo_games')) {
                 'text' => 'text-amber-200',
                 'bar' => 'bg-amber-300',
                 'wash' => 'from-amber-300/20',
+                'soft' => 'bg-amber-300/10 text-amber-200 ring-1 ring-inset ring-amber-300/25',
             ],
             default => [
                 'mark' => '✓',
@@ -525,6 +528,7 @@ if (!function_exists('dartiqo_games')) {
                 'text' => 'text-accent',
                 'bar' => 'bg-accent',
                 'wash' => 'from-accent/20',
+                'soft' => 'bg-accent/10 text-accent ring-1 ring-inset ring-accent/25',
             ],
         };
     }

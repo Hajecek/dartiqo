@@ -90,7 +90,7 @@ const DartBoard = (() => {
     if (sharesEl) {
       sharesEl.innerHTML = rows.map(r => {
         const rate = Math.round(r[1] / total * 100);
-        return `<div class="grid grid-cols-[4.2rem_1fr_2.6rem] items-center gap-3 text-sm"><span>${r[0]}</span><span class="block h-2 overflow-hidden rounded-full bg-white/10"><i class="block h-full rounded-full" style="width:${rate}%;background:${r[2]}"></i></span><b class="text-right">${rate} %</b></div>`;
+        return `<div class="grid grid-cols-[4.2rem_1fr_2.6rem] items-center gap-3 text-sm"><span class="text-zinc-400">${r[0]}</span><span class="block h-1.5 overflow-hidden rounded-full bg-white/[.07]"><i class="block h-full rounded-full" style="width:${rate}%;background:${r[2]}"></i></span><b class="num text-right">${rate} %</b></div>`;
       }).join('');
     }
     const fields = [];
@@ -106,7 +106,7 @@ const DartBoard = (() => {
     if (misses) fields.push(['Vedle', +misses]);
     fields.sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'cs'));
     if (fieldsEl) {
-      fieldsEl.innerHTML = fields.slice(0, 8).map(f => `<div class="flex items-center justify-between rounded-2xl border border-white/10 bg-zinc-950/40 px-3 py-2 text-sm"><strong>${escapeHtml(String(f[0]))}</strong><span class="text-zinc-400">${f[1]}×</span></div>`).join('');
+      fieldsEl.innerHTML = fields.slice(0, 8).map(f => `<div class="tile flex items-center justify-between px-3 py-2.5 text-sm"><strong class="num">${escapeHtml(String(f[0]))}</strong><span class="text-zinc-500 tabular-nums">${f[1]}×</span></div>`).join('');
     }
   };
   const paintAim = (els, board, aimPick) => {

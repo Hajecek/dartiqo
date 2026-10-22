@@ -21,5 +21,9 @@ function url(string $path = '/'): string
 
 function asset(string $path): string
 {
-    return app()->url('/assets/' . ltrim($path, '/'));
+    $path = ltrim($path, '/');
+    $file = dirname(__DIR__, 2) . '/assets/' . $path;
+    $version = is_file($file) ? '?v=' . filemtime($file) : '';
+
+    return app()->url('/assets/' . $path) . $version;
 }
