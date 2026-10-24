@@ -37,6 +37,7 @@ $router->post('/app/games/{id}/delete', [GameController::class, 'destroy']);
 $router->get('/app/games', [PageController::class, 'appGames']);
 $router->get('/app/career', [PageController::class, 'appCareer']);
 $router->get('/app/live', [PageController::class, 'live']);
+$router->get('/app/live/state', [LiveController::class, 'state']);
 $router->get('/app/live/stream', [LiveController::class, 'stream']);
 $router->get('/app/profile', [PageController::class, 'profile']);
 $router->get('/app/friends', [WebFriendController::class, 'index']);

@@ -20,6 +20,14 @@ final class LiveMatchRepository
     /** @param array<string, mixed> $state */
     public function save(int $userId, string $clientId, string $status, int $seq, array $state, string $startedAt): void
     {
+        if ($status === 'abandoned') {
+            $this->db->query(
+                'DELETE FROM live_matches WHERE user_id = :user_id AND client_id = :client_id AND seq <= :seq',
+                ['user_id' => $userId, 'client_id' => $clientId, 'seq' => $seq]
+            );
+
+            return;
+        }
         $now = gmdate('Y-m-d H:i:s');
         // seq se nastavuje až poslední, ostatní sloupce ho porovnávají s původní hodnotou
         $this->db->query(

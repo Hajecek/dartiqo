@@ -5,8 +5,9 @@
 <div id="root">
 <?= $content ?>
 </div>
-<div id="live-banner" data-stream="<?= e(url('/app/live/stream')) ?>" hidden></div>
+<div id="live-banner" data-stream="<?= e(url('/app/live/stream')) ?>" data-state="<?= e(url('/app/live/state')) ?>" hidden></div>
 <script src="<?= e(asset('js/board.js')) ?>"></script>
+<script src="<?= e(asset('js/checkout.js')) ?>"></script>
 <script src="<?= e(asset('js/app.js')) ?>"></script>
 </body>
 </html>

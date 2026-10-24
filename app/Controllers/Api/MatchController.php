@@ -38,7 +38,13 @@ final class MatchController extends ApiController
             $this->json(['ok' => false, 'message' => $e->getMessage()], 422);
         }
 
-        $publicId = (new MatchRepository(db()))->save((int) $user['id'], $clientId, $match, MatchStats::analyze($match));
+        $matches = new MatchRepository(db());
+        if ($match['status'] === 'abandoned') {
+            $matches->delete((int) $user['id'], $clientId);
+            $this->json(['ok' => true]);
+        }
+
+        $publicId = $matches->save((int) $user['id'], $clientId, $match, MatchStats::analyze($match));
         $this->json(['ok' => true, 'id' => $publicId]);
     }
 

@@ -436,17 +436,19 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     const darts=(m.currentDarts||[]).length;
     const caption=finished?(winnerName(m)?'Vyhrál '+winnerName(m):'Zápas skončil'):(m.setsToWin>1?'Set '+m.set+' · ':'')+'Leg '+m.leg+' · Šipky '+darts+'/3';
     const tint=i=>m.players.length<=2?(onTurn(m,i)?MC.coral:MC.amber):playerColor(i);
-    const divider='<i class="mx-[.6em] h-[1.2em] w-px shrink-0 bg-white/20" aria-hidden="true"></i>';
-    const score=(title,values,total)=>`${divider}<span class="flex min-w-0 flex-1 items-center justify-center gap-[.4em] whitespace-nowrap"><span class="font-semibold text-white/80">${title}</span><span class="flex items-center gap-[.3em] text-[1.3em] font-extrabold tabular-nums">${values.map((v,i)=>`${i?'<span class="text-white/40">:</span>':''}<span style="color:${tint(i)}">${v}</span>`).join('')}</span><span class="text-[.9em] font-semibold text-white/40 tabular-nums">(do ${total})</span></span>`;
-    return `<div class="match-glass flex min-h-[2.8em] items-center rounded-[14px] px-[.6em] py-[.4em] text-[clamp(13px,1.8vh,28px)] 2xl:rounded-[20px]"><span class="min-w-0 flex-1 truncate text-center font-semibold text-white/80 tabular-nums">${escapeHtml(caption)}</span>${m.setsToWin>1?score('Sety',m.players.map(p=>p.sets),m.setsToWin):''}${m.setsToWin>1||m.legsToWin>1?score('Legy',m.players.map(p=>p.legs),m.legsToWin):''}</div>`;
+    const divider='<i class="mx-[.5em] h-[1.35em] w-px shrink-0 bg-white/20" aria-hidden="true"></i>';
+    const score=(title,values,total)=>`${divider}<span class="flex min-w-0 flex-1 items-center justify-center gap-[.35em] whitespace-nowrap"><span class="font-semibold text-white/70" style="font-size:.58em">${title}</span><span class="flex items-center gap-[.16em] leading-none font-extrabold tabular-nums" style="font-size:1.85em">${values.map((v,i)=>`${i?'<span class="text-white/40">:</span>':''}<span style="color:${tint(i)}">${v}</span>`).join('')}</span><span class="font-semibold text-white/45 tabular-nums" style="font-size:.5em">(do ${total})</span></span>`;
+    return `<div class="match-glass flex min-h-[2.4em] items-center rounded-[14px] px-[.55em] py-[.3em] 2xl:rounded-[20px]" style="font-size:clamp(22px,3.5vh,52px)"><span class="min-w-0 flex-[.7] truncate text-center font-semibold text-white/80 tabular-nums" style="font-size:.58em">${escapeHtml(caption)}</span>${m.setsToWin>1?score('Sety',m.players.map(p=>p.sets),m.setsToWin):''}${m.setsToWin>1||m.legsToWin>1?score('Legy',m.players.map(p=>p.legs),m.legsToWin):''}</div>`;
   };
 
+  const sideStat=(title,value)=>`<span class="flex flex-col items-end leading-none"><span class="font-extrabold tracking-wide uppercase opacity-55" style="font-size:clamp(11px,1.2vh,18px)">${title}</span><b class="leading-none font-extrabold tabular-nums" style="font-size:clamp(32px,5vh,84px)">${value}</b></span>`;
   const panelChips=(m,p,i)=>{
-    const stat=m.mode==='cricket'?['Zavřeno',m.numbers.filter(n=>(p.marks[n]||0)>=3).length+'/'+m.numbers.length]
-      :m.mode==='aroundClock'?['Hotovo',(p.score==='Bull'?20:Math.max(0,+p.score-1))+'/21']
-      :['Ø',p.darts?p.average.toFixed(1):'—'];
-    const won=m.winner===i?`<span class="inline-flex items-center rounded-full px-[.7em] py-[.25em] text-[.8em] font-extrabold uppercase" style="background:${MC.ink};color:${MC.green}">Vítěz</span>`:'';
-    return won+`<span class="inline-flex items-center gap-[.3em] rounded-full px-[.7em] py-[.25em]" style="background:${MC.ink}1f"><span class="text-[.8em] font-extrabold opacity-60">${stat[0]}</span><b class="font-bold tabular-nums">${stat[1]}</b></span>`;
+    const won=m.winner===i?`<span class="inline-flex items-center rounded-full px-[.55em] py-[.18em] text-[.68em] font-extrabold uppercase" style="background:${MC.ink};color:${MC.green}">Vítěz</span>`:'';
+    if(m.mode==='cricket') return won+sideStat('Zavřeno',m.numbers.filter(n=>(p.marks[n]||0)>=3).length+'/'+m.numbers.length);
+    if(m.mode==='aroundClock') return won+sideStat('Hotovo',(p.score==='Bull'?20:Math.max(0,+p.score-1))+'/21');
+    const avg=p.darts?p.average.toFixed(1):'—';
+    const result=m.setsToWin>1?sideStat('Sety',p.sets)+sideStat('Legy',p.legs):(m.legsToWin>1?sideStat('Legy',p.legs):'');
+    return won+sideStat('Ø',avg)+result;
   };
 
   // Karty se staví jen jednou na zápas, pak se mění jen hodnoty, aby mohly běžet animace
@@ -459,8 +461,8 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     grid.innerHTML='<i class="pointer-events-none absolute top-0 left-0 z-0 transition-[transform,width,height,background-color] duration-500 ease-[cubic-bezier(.65,0,.35,1)]" data-focus aria-hidden="true"></i>'
       +m.players.map((p,i)=>`<article class="relative z-[1] flex min-h-0 min-w-0 flex-col p-[1em]" style="color:${MC.ink};font-size:${base}" data-i="${i}">
 <div class="flex min-w-0 items-center gap-[.45em]"><span class="grid size-[1.6em] shrink-0 place-items-center rounded-full text-[.7em] font-bold" style="background:${MC.ink}26">${escapeHtml(p.name.slice(0,1).toUpperCase())}</span><strong class="min-w-0 flex-1 truncate font-semibold">${escapeHtml(p.name)}</strong>${p.bot?cpuIcon.replace('size-3','size-[1em]'):''}</div>
-<strong class="flex min-h-0 flex-1 items-center leading-none font-bold tracking-tight tabular-nums transition-colors duration-500" style="font-size:${big}" data-score></strong>
-<div class="flex flex-wrap gap-[.3em]" data-chips></div>
+<div class="flex min-h-0 flex-1 items-center gap-[.35em]"><strong class="flex min-w-0 flex-1 items-center leading-none font-bold tracking-tight tabular-nums transition-colors duration-500" style="font-size:${big}" data-score></strong>
+<div class="flex shrink-0 flex-col items-end justify-center gap-[.22em]" data-chips></div></div>
 </article>`).join('');
   };
 
@@ -516,18 +518,65 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     if(!notch.hidden)notch.style.left=((focus%cols)+.5)/cols*100+'%';
   };
 
-  const throwSlot=(i,dart,tip,fresh)=>{
+  const splitRoute=text=>String(text||'').split(/\s+/).filter(Boolean);
+  const sameRoute=(a,b)=>a.length===b.length&&a.every((dart,i)=>dart===b[i]);
+  // Zavření a sehrávka jako v aplikaci. Když je telefon pošle, mají přednost před výpočtem v prohlížeči.
+  const liveGuide=m=>{
+    if(m.status!=='live'||m.mode!=='x01'||m.winner!=null) return null;
+    const player=m.players[m.active];
+    const left=3-(m.currentDarts||[]).length;
+    if(!player||left<=0) return null;
+    const rule=player.out==='straight'||player.out==='master'?player.out:'double';
+    const score=+player.score;
+    const known=Number.isFinite(score)&&score>0&&score<=180;
+    const finish=splitRoute(player.checkout);
+    if(finish.length){
+      const alts=known&&typeof checkoutAlternatives==='function'?checkoutAlternatives(score,left,rule):[finish];
+      const list=[finish,...alts.filter(route=>!sameRoute(route,finish))].slice(0,3);
+      return {kind:'finish',route:finish,alts:list,leave:null};
+    }
+    const setup=splitRoute(player.setup);
+    if(setup.length) return {kind:'setup',route:setup,alts:[setup],leave:player.setupLeave||''};
+    if(!known||typeof checkoutRoute!=='function') return null;
+    const route=checkoutRoute(score,left,rule);
+    if(route) return {kind:'finish',route,alts:checkoutAlternatives(score,left,rule),leave:null};
+    const hinted=typeof checkoutSetup==='function'?checkoutSetup(score,left,rule):null;
+    if(hinted) return {kind:'setup',route:hinted.darts,alts:[hinted.darts],leave:hinted.leave};
+    return null;
+  };
+
+  const throwSlot=(i,dart,tip,fresh,leave)=>{
     if(dart)return `<div class="flex flex-1 flex-col items-center justify-center gap-[.15em] ${fresh?'animate-reveal':''}"><span class="text-[.6em] font-bold text-white/45">${i+1}</span><b class="text-[1.9em] leading-none font-bold tabular-nums">${dartValue(dart)}</b><span class="text-[.8em] font-bold text-white/70">${escapeHtml(dart)}</span></div>`;
-    if(tip)return `<div class="flex flex-1 flex-col items-center justify-center gap-[.15em]" style="color:${MC.green}"><span class="flex items-center gap-[.25em] text-[.6em] font-extrabold opacity-70"><svg class="size-[.9em]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/></svg>AI</span><b class="text-[1.9em] leading-none font-extrabold">${escapeHtml(tip)}</b><span class="text-[.8em] font-bold tabular-nums opacity-75">${dartValue(tip)}</span></div>`;
+    if(tip){
+      const setup=leave!=null;
+      const color=setup?'#ff991a':MC.green;
+      const tag=setup?'Sehrávka':'AI';
+      const icon=setup?'<svg class="size-[.9em]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h9a4 4 0 0 1 0 8H9"/><path d="M11 11 7 15l4 4"/></svg>':'<svg class="size-[.9em]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/></svg>';
+      const sub=setup?'na '+escapeHtml(leave):dartValue(tip);
+      return `<div class="flex flex-1 flex-col items-center justify-center gap-[.15em] rounded-[.55em]" style="color:${color};background:${color}1f"><span class="flex items-center gap-[.25em] text-[.55em] font-extrabold tracking-wide uppercase">${icon}${tag}</span><b class="text-[1.7em] leading-none font-extrabold">${escapeHtml(tip)}</b><span class="text-[.7em] font-bold tabular-nums opacity-80">${sub}</span></div>`;
+    }
     return `<div class="flex flex-1 flex-col items-center justify-center gap-[.15em]"><span class="text-[.6em] font-bold text-white/40">${i+1}</span><b class="text-[1.9em] leading-none font-bold text-white/30">—</b><span class="text-[.8em] font-semibold text-white/50">${i+1}. šipka</span></div>`;
   };
 
   const throwStrip=m=>{
     const darts=m.currentDarts||[];
-    const player=m.players[m.active];
-    const route=m.status==='live'&&m.mode==='x01'&&player?.checkout?player.checkout.split(' '):[];
-    const slots=[0,1,2].map(i=>(i?'<i class="my-auto h-[2.6em] w-px shrink-0 bg-white/20" aria-hidden="true"></i>':'')+throwSlot(i,darts[i],darts[i]?null:route[i-darts.length],i===darts.length-1)).join('');
+    const guide=liveGuide(m);
+    const route=guide?.route||[];
+    const leave=guide?.kind==='setup'?guide.leave:'';
+    const slots=[0,1,2].map(i=>{
+      const dart=darts[i];
+      const tip=dart?null:route[i-darts.length]||null;
+      return (i?'<i class="my-auto h-[2.6em] w-px shrink-0 bg-white/20" aria-hidden="true"></i>':'')+throwSlot(i,dart,tip,i===darts.length-1,tip&&guide?.kind==='setup'?leave:null);
+    }).join('');
     return `<div class="match-glass flex h-[7.5em] items-stretch gap-[.4em] rounded-[14px] px-[.6em] py-[.4em] text-[clamp(16px,2.9vh,46px)] 2xl:rounded-[20px]" aria-label="Aktuální hod">${slots}</div>`;
+  };
+
+  const routeBoard=m=>{
+    const guide=liveGuide(m);
+    if(!guide) return '';
+    if(guide.kind==='setup') return `<div class="mt-2 rounded-2xl bg-[#ff991a]/12 px-3 py-2.5 ring-1 ring-[#ff991a]/35 ring-inset"><div class="text-[10px] font-extrabold tracking-[.14em] text-[#ff991a] uppercase 2xl:text-xs">Sehrávka na ${escapeHtml(guide.leave)}</div><div class="mt-1 text-[clamp(16px,2vh,28px)] leading-none font-extrabold text-white">${guide.route.map(escapeHtml).join(' · ')}</div></div>`;
+    const rows=guide.alts.map((route,i)=>`<div class="${i?'text-[.78em] font-bold text-white/60':'font-extrabold text-white'}">${route.map(escapeHtml).join(' · ')}</div>`).join('');
+    return `<div class="mt-2 rounded-2xl bg-[#4dd984]/10 px-3 py-2.5 ring-1 ring-[#4dd984]/25 ring-inset"><div class="text-[10px] font-extrabold tracking-[.14em] text-[#4dd984] uppercase 2xl:text-xs">Možné sehrávky</div><div class="mt-1 flex flex-col gap-1 text-[clamp(15px,1.9vh,26px)] leading-tight">${rows}</div></div>`;
   };
 
   const cricketCard=m=>{
@@ -538,7 +587,7 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
   };
 
 
-  // Jedna řádka = jedno kolo. Chronologicky od začátku dolů.
+  // Jedna řádka = jedno kolo. Nejnovější leg i hod jsou nahoře.
   const visitRow=(m,v,open,n)=>{
     const name=m.players[v.player]?.name||'';
     const tint=playerColor(v.player);
@@ -556,10 +605,12 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
 </div>`;
   };
 
-  const legHeader=(m,leg,set,live)=>{
+  const legHeader=(m,sheet,live)=>{
     const playsSets=m.setsToWin>1;
-    const title=playsSets?`Set ${set} · Leg ${leg}`:`Leg ${leg}`;
-    return `<div class="mt-2 flex shrink-0 items-center gap-2 first:mt-0"><span class="text-[11px] font-extrabold tracking-[.14em] text-white/55 uppercase 2xl:text-xs">${title}</span>${live?'<span class="rounded bg-white/15 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-white/80 uppercase">teď</span>':''}<i class="h-px flex-1 bg-white/10" aria-hidden="true"></i></div>`;
+    const title=playsSets?`Set ${sheet.set} · Leg ${sheet.leg}`:`Leg ${sheet.leg}`;
+    const bits=(sheet.score||[]).map((n,i)=>`${i?'<span class="px-0.5 text-white/30">:</span>':''}<span class="inline-flex items-center gap-1"><i class="size-1.5 rounded-full" style="background:${playerColor(i)}" aria-hidden="true"></i><b class="tabular-nums" style="color:${playerColor(i)}">${n}</b></span>`).join('');
+    const winner=sheet.winner!=null&&m.players[sheet.winner]?`<span class="mt-0.5 block text-[10px] font-semibold tracking-normal text-white/45 normal-case 2xl:text-xs">${escapeHtml(m.players[sheet.winner].name)} · ${sheet.checkoutScore==null?'bere leg':'zavřeno '+sheet.checkoutScore}</span>`:'';
+    return `<div class="mt-3 shrink-0 first:mt-0"><div class="flex items-center gap-2"><span class="text-[11px] font-extrabold tracking-[.14em] text-white/70 uppercase 2xl:text-sm">${title}</span>${live?'<span class="rounded bg-[#fefc03] px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-black uppercase">teď</span>':''}<i class="h-px flex-1 bg-white/10" aria-hidden="true"></i><span class="flex items-center leading-none font-extrabold" style="font-size:clamp(18px,2.4vh,36px)">${bits}</span></div>${winner}</div>`;
   };
 
   // Když telefon ještě neposílá leg u kola, odhadneme ho podle zavření
@@ -577,19 +628,39 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     });
   };
 
+  const legSheets=(m,rows)=>{
+    const groups=[];
+    for(const v of rows){
+      const key=`${v.set||1}:${v.leg||1}`;
+      let group=groups[groups.length-1];
+      if(!group||group.key!==key){group={key,leg:+(v.leg||1),set:+(v.set||1),rows:[]};groups.push(group)}
+      group.rows.push(v);
+    }
+    const legs=m.players.map(()=>0);
+    for(const group of groups){
+      let winner=null,checkoutScore=null;
+      for(const v of group.rows) if(v.checkout&&!v.bust&&!v._open){winner=v.player;checkoutScore=v.score}
+      const shown=legs.slice();
+      if(winner!=null) shown[winner]++;
+      group.winner=winner;group.checkoutScore=checkoutScore;group.score=shown;
+      if(winner!=null){
+        legs[winner]++;
+        if(m.setsToWin>1&&legs[winner]>=m.legsToWin) legs.fill(0);
+      }
+    }
+    return groups.reverse().map(group=>({...group,rows:group.rows.slice().reverse()}));
+  };
+
   const visitLog=(m,finished)=>{
     const open=!finished&&(m.currentDarts||[]).length;
     const rows=withLegs(m,m.visits||[]);
     if(open)rows.push({player:m.active,darts:m.currentDarts,leg:m.leg,set:m.set||1,_open:true});
     if(!rows.length)return '<span class="block py-6 text-center text-sm text-white/50">Zatím nepadla žádná šipka.</span>';
-    let html='',prev='',n=0;
-    for(const v of rows){
-      const key=`${v.set||1}:${v.leg||1}`;
-      if(key!==prev){
-        html+=legHeader(m,v.leg||1,v.set||1,!finished&&(v.leg||1)===m.leg&&(v.set||1)===(m.set||1));
-        prev=key;n=0;
-      }
-      html+=visitRow(m,v,!!v._open,n++);
+    let html='';
+    for(const sheet of legSheets(m,rows)){
+      const live=!finished&&sheet.leg===m.leg&&sheet.set===(m.set||1);
+      html+=legHeader(m,sheet,live);
+      sheet.rows.forEach((v,n)=>{html+=visitRow(m,v,!!v._open,n)});
     }
     return html;
   };
@@ -619,12 +690,16 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     $('#live-progress').innerHTML=progressStrip(m);
     paintPlayers(m);
     $('#live-strip').innerHTML=(m.mode==='cricket'&&m.numbers.length?cricketCard(m):'')+(finished?'':throwStrip(m));
+    const routes=$('#live-routes');
+    if(routes) routes.innerHTML=finished?'':routeBoard(m);
     const box=$('#live-visits');
+    const nearTop=box.scrollTop<48;
+    const height=box.scrollHeight,top=box.scrollTop;
     box.innerHTML=visitLog(m,finished);
-    box.scrollTop=box.scrollHeight;
+    box.scrollTop=nearTop?0:top+(box.scrollHeight-height);
   };
 
-  let watchedLive=false,reloadQueued=false;
+  let watchedLive=false,reloadQueued=false,lastEvent=0,pulling=false,source=null;
   const paint=m=>{
     current=m;paintBanner(m);if(livePage)paintPage(m);
     if(!liveHero)return;
@@ -635,11 +710,47 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     paintHero(m);
     if(finished&&!reloadQueued&&liveHero.hasAttribute('data-reload-on-finish')){reloadQueued=true;setTimeout(()=>location.reload(),6000)}
   };
-  const source=new EventSource(liveBanner.dataset.stream);
-  source.onmessage=e=>{try{paint(JSON.parse(e.data).match||null)}catch{}};
+  const apply=m=>{
+    if(m&&current&&m.id===current.id&&m.seq<current.seq) return;
+    lastEvent=Date.now();
+    if(m&&current&&m.id===current.id&&m.seq===current.seq&&m.status===current.status){if(livePage)paintBadge(m);return}
+    paint(m);
+  };
+  const markWaiting=()=>{
+    const badge=$('#live-badge');
+    if(!badge) return;
+    badge.className='inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-white/60 uppercase 2xl:text-xs';
+    badge.textContent=current?'Obnovuji spojení…':'Připojuji…';
+  };
+  const pull=async()=>{
+    if(!livePage||pulling||!liveBanner.dataset.state||document.hidden) return;
+    pulling=true;
+    try{
+      const response=await fetch(liveBanner.dataset.state,{cache:'no-store',credentials:'same-origin',headers:{Accept:'application/json'}});
+      if(!response.ok) return;
+      const data=await response.json();
+      apply(data.match??null);
+    }catch{}
+    finally{pulling=false}
+  };
+  const openStream=()=>{
+    if(typeof EventSource==='undefined') return;
+    if(source){source.onerror=null;source.close()}
+    source=new EventSource(liveBanner.dataset.stream);
+    source.onmessage=e=>{try{apply(JSON.parse(e.data).match??null)}catch{}};
+    source.onopen=()=>{if(livePage)paintBadge(current)};
+    source.onerror=()=>{
+      if(livePage&&Date.now()-lastEvent>2000) markWaiting();
+      if(livePage) pull();
+      if(source.readyState===EventSource.CLOSED) setTimeout(openStream,700);
+    };
+  };
+  openStream();
   if(livePage){
-    source.onopen=()=>paintBadge(current);
-    source.onerror=()=>{const badge=$('#live-badge');badge.className='inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-white/60 uppercase 2xl:text-xs';badge.textContent='Obnovuji spojení…'};
+    pull();
+    setInterval(()=>{if(!document.hidden) pull()},1000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden){pull();if(!source||source.readyState===EventSource.CLOSED) openStream()}});
+    window.addEventListener('online',()=>{pull();if(!source||source.readyState===EventSource.CLOSED) openStream()});
     const fs=$('[data-live-fullscreen]'),page=document.documentElement;
     if(fs&&page.requestFullscreen){
       fs.onclick=()=>document.fullscreenElement?document.exitFullscreen():page.requestFullscreen().catch(()=>{});

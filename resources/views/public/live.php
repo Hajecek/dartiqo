@@ -27,7 +27,8 @@ require_once __DIR__ . '/../partials/ui.php';
 <div class="flex shrink-0 flex-col gap-2 2xl:gap-3" id="live-strip"></div>
 </div>
 <section class="match-glass flex flex-col rounded-[22px] p-4 lg:min-h-0 2xl:rounded-[32px] 2xl:p-5" aria-labelledby="live-log-title">
-<div class="flex shrink-0 items-baseline justify-between gap-3"><h2 class="text-xs! font-bold tracking-wider text-white/55 uppercase 2xl:text-sm!" id="live-log-title">Poslední kola</h2><span class="text-[11px] font-semibold text-white/40 2xl:text-xs">od začátku dolů</span></div>
+<div class="flex shrink-0 items-baseline justify-between gap-3"><h2 class="text-xs! font-bold tracking-wider text-white/55 uppercase 2xl:text-sm!" id="live-log-title">Historie hodů</h2><span class="text-[11px] font-semibold text-white/40 2xl:text-xs">nejnovější nahoře</span></div>
+<div class="shrink-0" id="live-routes"></div>
 <div class="mt-2 grid shrink-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_auto] gap-x-2 px-1 text-[10px] font-bold tracking-wider text-white/35 uppercase 2xl:text-xs" aria-hidden="true"><span>Hráč</span><span>Šipky</span><span class="text-right">Body</span></div>
 <div class="mt-1 flex flex-col gap-0.5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:[scrollbar-width:none]" id="live-visits"></div>
 </section>

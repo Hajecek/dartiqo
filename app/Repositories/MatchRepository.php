@@ -122,6 +122,7 @@ final class MatchRepository
      */
     public function allForUser(int $userId): array
     {
+        $this->deleteAbandoned($userId);
         $rows = $this->db->fetchAll(
             'SELECT public_id, status, mode, title, is_solo, result, average, play_seconds, started_at, finished_at, log
              FROM matches WHERE user_id = :user ORDER BY started_at DESC, id DESC',
@@ -132,6 +133,12 @@ final class MatchRepository
         }
 
         return $rows;
+    }
+
+    /** Nedohraný zápas v historii nezůstává. */
+    public function deleteAbandoned(int $userId): void
+    {
+        $this->db->query('DELETE FROM matches WHERE user_id = :user AND status = \'abandoned\'', ['user' => $userId]);
     }
 
     public function delete(int $userId, string $clientId): void

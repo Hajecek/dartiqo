@@ -91,7 +91,10 @@ final class LiveMatchPayload
             'average' => round(max(0, min(180, (float) ($raw['average'] ?? 0))), 2),
             'darts' => self::int($raw['darts'] ?? 0, 0, 99_999),
             'last' => isset($raw['last']) ? self::int($raw['last'], 0, 180) : null,
-            'checkout' => self::text($raw['checkout'] ?? '', 30),
+            'checkout' => self::text($raw['checkout'] ?? '', 40),
+            'setup' => self::text($raw['setup'] ?? '', 40),
+            'setupLeave' => self::text($raw['setupLeave'] ?? '', 16),
+            'out' => self::outRule($raw['out'] ?? ''),
             'marks' => $marks,
         ];
     }
@@ -103,17 +106,24 @@ final class LiveMatchPayload
             return [];
         }
         $visits = [];
-        foreach (array_slice(array_values($raw), -12) as $visit) {
+        foreach (array_slice(array_values($raw), -1500) as $visit) {
             if (!is_array($visit) || self::index($visit['player'] ?? null, $players) === null) {
                 continue;
             }
-            $visits[] = [
+            $line = [
                 'player' => (int) $visit['player'],
                 'darts' => self::darts($visit['darts'] ?? [], 3),
                 'score' => self::int($visit['score'] ?? 0, 0, 180),
                 'bust' => (bool) ($visit['bust'] ?? false),
                 'checkout' => (bool) ($visit['checkout'] ?? false),
             ];
+            if (is_numeric($visit['leg'] ?? null)) {
+                $line['leg'] = self::int($visit['leg'], 1, 999);
+            }
+            if (is_numeric($visit['set'] ?? null)) {
+                $line['set'] = self::int($visit['set'], 1, 99);
+            }
+            $visits[] = $line;
         }
 
         return $visits;
@@ -153,6 +163,13 @@ final class LiveMatchPayload
     private static function int(mixed $value, int $min, int $max): int
     {
         return max($min, min($max, is_numeric($value) ? (int) $value : $min));
+    }
+
+    private static function outRule(mixed $value): string
+    {
+        $rule = is_scalar($value) ? (string) $value : '';
+
+        return in_array($rule, ['double', 'straight', 'master'], true) ? $rule : '';
     }
 
     private static function text(mixed $value, int $max): string

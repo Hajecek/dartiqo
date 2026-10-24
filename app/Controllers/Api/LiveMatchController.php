@@ -19,7 +19,7 @@ final class LiveMatchController extends ApiController
         if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $clientId)) {
             $this->json(['ok' => false, 'message' => 'Neplatné id zápasu.'], 422);
         }
-        if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 65_536) {
+        if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 400_000) {
             $this->json(['ok' => false, 'message' => 'Stav zápasu je moc velký.'], 413);
         }
 
