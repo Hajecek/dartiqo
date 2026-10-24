@@ -8,6 +8,10 @@ require_once __DIR__ . '/../partials/ui.php';
 <div class="flex min-w-0 items-center gap-2 text-xs font-semibold text-white/55 2xl:text-sm"><span id="live-badge" class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-white/60 uppercase">Připojuji…</span><span class="truncate" id="live-meta"></span></div>
 <h1 class="mt-0.5 truncate text-xl! leading-tight! text-white md:text-2xl! 2xl:text-4xl!" id="live-title">Živý zápas</h1>
 </div>
+<div class="match-glass inline-flex h-11 shrink-0 items-center gap-2 rounded-[14px] px-3.5 text-white 2xl:h-14 2xl:px-5" id="live-clock" hidden>
+<span class="text-[10px] font-bold tracking-wider text-white/45 uppercase 2xl:text-xs">Čas</span>
+<b class="text-base font-extrabold tabular-nums 2xl:text-xl" id="live-clock-value">0:00</b>
+</div>
 <button class="match-glass inline-flex h-11 shrink-0 items-center gap-2 rounded-[14px] px-3.5 text-sm font-semibold whitespace-nowrap text-white hover:bg-white/15 2xl:h-14 2xl:px-5 2xl:text-base [&_svg]:size-5" type="button" data-live-fullscreen title="Celá obrazovka"><?= dartiqo_i('expand') ?><span class="max-sm:hidden" data-live-fullscreen-label>Celá obrazovka</span></button>
 </header>
 
@@ -29,11 +33,10 @@ require_once __DIR__ . '/../partials/ui.php';
 </div>
 <section class="match-glass flex flex-col rounded-[22px] p-4 lg:min-h-0 2xl:rounded-[32px] 2xl:p-5" aria-labelledby="live-log-title">
 <div class="flex shrink-0 items-baseline justify-between gap-3"><h2 class="text-xs! font-bold tracking-wider text-white/55 uppercase 2xl:text-sm!" id="live-log-title">Historie hodů</h2><span class="text-[11px] font-semibold text-white/40 2xl:text-xs">nejnovější nahoře</span></div>
-<div class="shrink-0" id="live-routes"></div>
 <div class="mt-2 grid shrink-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_auto] gap-x-2 px-1 text-[10px] font-bold tracking-wider text-white/35 uppercase 2xl:text-xs" aria-hidden="true"><span>Hráč</span><span>Šipky</span><span class="text-right">Body</span></div>
 <div class="mt-1 flex flex-col gap-0.5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:[scrollbar-width:none]" id="live-visits"></div>
 </section>
 </section>
-<div class="fixed inset-0 z-40 overflow-y-auto bg-[#0e1a14]" id="live-cover" hidden></div>
+<div class="absolute inset-0 z-20 overflow-hidden bg-[#0e1a14]" id="live-cover" hidden></div>
 </div>
 </main>

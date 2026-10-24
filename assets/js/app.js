@@ -324,6 +324,44 @@ const livePage=$('#live-page');
 if(liveBanner&&typeof EventSource!=='undefined'){
   const dismissKey='dartiqo-live-dismissed';
   let current=null;
+  const clock={played:0,running:false,at:0};
+  const clockParts=seconds=>{
+    const total=Math.max(0,Math.floor(seconds));
+    return {h:Math.floor(total/3600),m:Math.floor((total%3600)/60),s:total%60};
+  };
+  const clockText=seconds=>{
+    const {h,m,s}=clockParts(seconds);
+    const pad=n=>String(n).padStart(2,'0');
+    return h>0?`${h}:${pad(m)}:${pad(s)}`:`${m}:${pad(s)}`;
+  };
+  const clockSeconds=()=>clock.played+(clock.running?Math.max(0,Date.now()-clock.at)/1000:0);
+  const bindClock=m=>{
+    clock.played=Math.max(0,Math.round(+m?.played||0));
+    clock.running=!!(m&&m.running&&m.status==='live'&&!m.paused);
+    clock.at=Date.now();
+    paintClock();
+  };
+  const paintClock=()=>{
+    const box=$('#live-clock'),value=$('#live-clock-value');
+    if(!box||!value) return;
+    const on=!!current;
+    box.hidden=!on;
+    if(!on) return;
+    const seconds=clockSeconds();
+    const text=clockText(seconds);
+    if(value.textContent!==text) value.textContent=text;
+    const parts=clockParts(seconds);
+    const pad=n=>String(n).padStart(2,'0');
+    const hours=$('[data-clock-hours]');
+    if(hours) hours.hidden=parts.h<1;
+    const colon=$('[data-clock-colon]');
+    if(colon) colon.hidden=parts.h<1;
+    const set=(sel,next)=>{const el=$(sel);if(el&&el.textContent!==next) el.textContent=next};
+    set('[data-clock-h]',String(parts.h));
+    set('[data-clock-m]',parts.h>0?pad(parts.m):String(parts.m));
+    set('[data-clock-s]',pad(parts.s));
+  };
+  setInterval(paintClock,250);
   const matchup=m=>m.players.length===2?m.players[0].name+' vs '+m.players[1].name:m.players.map(p=>p.name).join(' · ');
   const scoreline=m=>m.players.map(p=>escapeHtml(p.score)).join('<span class="px-1.5 text-zinc-600">:</span>');
   const winnerName=m=>m.winner!=null&&m.players[m.winner]?m.players[m.winner].name:null;
@@ -646,14 +684,6 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     return `<div class="match-glass flex h-[7.5em] items-stretch gap-[.4em] rounded-[14px] px-[.6em] py-[.4em] text-[clamp(16px,2.9vh,46px)] 2xl:rounded-[20px]" aria-label="Aktuální hod">${slots}</div>`;
   };
 
-  const routeBoard=m=>{
-    const guide=liveGuide(m);
-    if(!guide) return '';
-    if(guide.kind==='setup') return `<div class="mt-2 rounded-2xl bg-[#ff991a]/12 px-3 py-2.5 ring-1 ring-[#ff991a]/35 ring-inset"><div class="text-[10px] font-extrabold tracking-[.14em] text-[#ff991a] uppercase 2xl:text-xs">Sehrávka na ${escapeHtml(guide.leave)}</div><div class="mt-1 text-[clamp(16px,2vh,28px)] leading-none font-extrabold text-white">${guide.route.map(escapeHtml).join(' · ')}</div></div>`;
-    const rows=guide.alts.map((route,i)=>`<div class="${i?'text-[.78em] font-bold text-white/60':'font-extrabold text-white'}">${route.map(escapeHtml).join(' · ')}</div>`).join('');
-    return `<div class="mt-2 rounded-2xl bg-[#4dd984]/10 px-3 py-2.5 ring-1 ring-[#4dd984]/25 ring-inset"><div class="text-[10px] font-extrabold tracking-[.14em] text-[#4dd984] uppercase 2xl:text-xs">Možné sehrávky</div><div class="mt-1 flex flex-col gap-1 text-[clamp(15px,1.9vh,26px)] leading-tight">${rows}</div></div>`;
-  };
-
   const cricketCard=m=>{
     const symbol=n=>['—','/','×','⊗'][Math.min(3,Math.max(0,n))];
     const head=`<tr><th class="w-[4em]"></th>${m.numbers.map(n=>`<th class="px-[.3em] pb-[.4em] text-[.8em] font-bold" style="color:${MC.ink}73">${n===25?'B':n}</th>`).join('')}</tr>`;
@@ -783,10 +813,23 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     };
   };
   const trophy='<svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12v2h2.2c.7 0 1.3.6 1.3 1.3 0 2.1-1.4 3.9-3.3 4.5A7 7 0 0 1 13 16.9V19h3.2v2H7.8v-2H11v-2.1a7 7 0 0 1-5.2-7.1A4.8 4.8 0 0 1 2.5 5.3C2.5 4.6 3.1 4 3.8 4H6V2zm0 4H4.7c.4 1.3 1.4 2.2 2.6 2.6A7 7 0 0 1 6 6.4V6zm12 0v.4a7 7 0 0 1-1.3 2.2c1.2-.4 2.2-1.3 2.6-2.6H18z"/></svg>';
-  const homeLink=()=>{
-    const href=$('a[aria-label="Domů"]')?.getAttribute('href')||url('/app');
-    return `<a class="match-glass grid size-11 place-items-center rounded-[14px] text-white hover:bg-white/15" href="${escapeHtml(href)}" aria-label="Domů"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg></a>`;
+  const pauseView=m=>{
+    const parts=clockParts(clockSeconds());
+    const pad=n=>String(n).padStart(2,'0');
+    const unit=(value,label,part)=>`<div class="flex min-w-16 flex-col items-center" ${part==='h'?'data-clock-hours':''} ${part==='h'&&parts.h<1?'hidden':''}><b class="text-[clamp(48px,8vh,84px)] leading-none font-extrabold tabular-nums" data-clock-${part}>${value}</b><span class="mt-1 text-[11px] font-bold tracking-wider text-white/45 uppercase">${label}</span></div>`;
+    const turn=m.legWinner==null&&m.players[m.active]?m.players[m.active].name:'';
+    const status=[m.title,turn?`na tahu ${turn}`:''].filter(Boolean).join(' · ');
+    const caption=m.mode==='x01'?'zbývá':m.mode==='aroundClock'?'cíl':'body';
+    const rows=m.players.map((p,i)=>{
+      const on=m.legWinner==null&&m.active===i;
+      const avg=m.mode==='x01'?`<span class="flex flex-col items-center gap-1"><b class="text-base font-bold tabular-nums">${formatAverage(liveAverage(m,p,i))??'—'}</b><span class="text-[10px] font-bold tracking-wide text-white/45 uppercase">Ø</span></span>`:'';
+      return `<article class="rounded-[22px] p-4 ${on?'bg-[#ff5233]/12 ring-1 ring-[#ff5233]/55':'bg-white/[.05]'}"><div class="flex items-center gap-3">${face(p.name,p.photo,'size-11 text-base text-white',`style="background:${playerColor(i)}"`)}<div class="min-w-0 flex-1"><b class="block truncate text-lg">${escapeHtml(p.name)}</b>${on?'<span class="mt-1 inline-flex rounded-full bg-[#ff5233] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#0b1a13] uppercase">Na tahu</span>':''}</div><div class="text-right"><b class="block text-[clamp(32px,4vh,48px)] leading-none font-extrabold tabular-nums" style="color:${on?MC.coral:'#fff'}">${escapeHtml(String(p.score))}</b><span class="text-[10px] font-bold tracking-wide text-white/45 uppercase">${caption}</span></div></div><div class="mt-3 flex border-t border-white/10 pt-3">${avg}<span class="flex flex-1 flex-col items-center gap-1"><b class="text-base font-bold tabular-nums">${p.last??'—'}</b><span class="text-[10px] font-bold tracking-wide text-white/45 uppercase">Max</span></span><span class="flex flex-1 flex-col items-center gap-1"><b class="text-base font-bold tabular-nums">${p.darts||0}</b><span class="text-[10px] font-bold tracking-wide text-white/45 uppercase">Šipky</span></span></div></article>`;
+    }).join('');
+    const hero=`<section class="flex min-h-[280px] flex-col items-center justify-center rounded-[22px] px-6 py-8 text-center lg:h-full 2xl:rounded-[32px]" style="background:radial-gradient(ellipse at top, rgba(255,153,26,.45), #0e1a14 68%)"><div class="inline-flex items-center gap-2 rounded-full bg-[#ff991a]/16 px-4 py-2 text-sm font-semibold text-[#ff991a]">Pozastaveno</div><div class="mt-6 flex items-start justify-center gap-3">${unit(String(parts.h),'hod','h')}<span class="pt-3 text-4xl font-bold text-white/25" data-clock-colon ${parts.h<1?'hidden':''}>:</span>${unit(parts.h>0?pad(parts.m):String(parts.m),'min','m')}<span class="pt-3 text-4xl font-bold text-white/25">:</span>${unit(pad(parts.s),'s','s')}</div><p class="mt-4 text-sm text-white/60">${escapeHtml(status)}</p></section>`;
+    const side=`<aside class="match-glass flex min-h-0 flex-col gap-3 overflow-y-auto rounded-[22px] p-4 lg:h-full lg:[scrollbar-width:none] 2xl:rounded-[32px] 2xl:p-5"><h3 class="shrink-0 text-xs font-bold tracking-wider text-white/55 uppercase">Hráči</h3><div class="flex flex-col gap-3">${rows}</div></aside>`;
+    return `<div class="${stageGrid} bg-[#0e1a14]">${hero}${side}</div>`;
   };
+  const stageGrid='grid h-full min-h-0 gap-3 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_clamp(300px,24vw,480px)] lg:gap-4 lg:overflow-hidden';
   const ceremonyView=(m,c)=>{
     const accent=c.matchFinished?MC.amber:c.isCheckout?MC.green:MC.coral;
     const name=m.players[c.winner].name;
@@ -800,15 +843,17 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
       const on=n<value,newest=pulse&&value>0&&n===value-1;
       return `<i class="rounded-full ${newest&&!reduced?'live-pip':''}" style="width:${newest?10:8}px;height:${newest?10:8}px;background:${on?accent:'rgba(255,255,255,.15)'}"></i>`;
     }).join('')}</span>`;
-    const cell=(value,total,pulse)=>`<span class="flex w-28 items-center justify-end gap-2">${pips(value,total,pulse)}<b class="min-w-6 text-right text-[clamp(22px,3vh,36px)] leading-none tabular-nums" style="color:${pulse?accent:'#fff'}">${value}</b></span>`;
+    const cell=(value,total,pulse)=>`<span class="flex min-w-24 items-center justify-end gap-2">${pips(value,total,pulse)}<b class="min-w-6 text-right text-[clamp(22px,3.2vh,40px)] leading-none tabular-nums" style="color:${pulse?accent:'#fff'}">${value}</b></span>`;
     const rows=m.players.map((p,i)=>{
       const win=i===c.winner;
-      return `<div class="flex items-center gap-3 px-4 py-3 ${i?'border-t border-white/10':''}">${face(p.name,p.photo,'size-9 text-sm text-white',`style="background:${playerColor(i)}"`)}<span class="min-w-0 flex-1 truncate ${win?'font-semibold text-white':'text-white/70'}">${escapeHtml(p.name)}</span>${c.playsSets?cell(c.sets[i]||0,c.setSlots,win&&c.setJustWon):''}${cell(c.legs[i]||0,c.legSlots,win)}</div>`;
+      return `<div class="flex items-center gap-3 px-4 py-3 ${i?'border-t border-white/10':''}">${face(p.name,p.photo,'size-10 text-sm text-white',`style="background:${playerColor(i)}"`)}<span class="min-w-0 flex-1 truncate text-[clamp(15px,1.8vh,22px)] ${win?'font-semibold text-white':'text-white/70'}">${escapeHtml(p.name)}</span>${c.playsSets?cell(c.sets[i]||0,c.setSlots,win&&c.setJustWon):''}${cell(c.legs[i]||0,c.legSlots,win)}</div>`;
     }).join('');
-    const heads=c.playsSets?`<div class="flex items-center gap-3 px-4 pt-3 text-[10px] font-bold tracking-wide text-white/45 uppercase"><span class="flex-1"></span><span class="w-28 text-right">Sety</span><span class="w-28 text-right">Legy</span></div>`:'';
-    const checkout=c.isCheckout&&c.checkoutScore>0?`<div class="mt-7 w-full rounded-3xl bg-white/[.07] px-4 py-5 text-center"><div class="text-sm font-semibold text-white/60">Checkout</div><div class="mt-1 text-[clamp(56px,8vh,88px)] leading-none font-extrabold tabular-nums" style="color:${accent}">${c.checkoutScore}</div>${c.checkoutDarts.length?`<div class="mt-3 flex flex-wrap justify-center gap-2">${c.checkoutDarts.map(d=>`<span class="rounded-full bg-white/12 px-3 py-1 text-sm font-semibold tabular-nums">${escapeHtml(d)}</span>`).join('')}</div>`:''}</div>`:'';
-    const mark=face(name,m.players[c.winner].photo,'size-24 text-3xl text-white',`style="background:${accent}24;box-shadow:0 0 0 6px ${accent}24"`);
-    return `<div class="relative flex min-h-full flex-col items-center px-5 py-6 text-white" style="background:radial-gradient(ellipse at top, ${accent}55, transparent 58%), #0e1a14"><div class="flex w-full max-w-xl">${homeLink()}</div><div class="flex w-full max-w-xl flex-1 flex-col items-center justify-center py-6"><div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold" style="color:${accent};background:${accent}29">${c.matchFinished?trophy:''}${escapeHtml(badge)}</div>${avgLine?`<div class="mt-3 rounded-full bg-white/10 px-4 py-2 text-sm font-bold tabular-nums">${escapeHtml(avgLine)}</div>`:''}<div class="relative mt-7 w-fit">${mark}${c.matchFinished?`<span class="absolute -right-1 -bottom-1 grid size-9 place-items-center rounded-full text-[#0b1a13]" style="background:${accent}">${trophy}</span>`:''}</div><h2 class="mt-5 text-center text-[clamp(36px,6vh,68px)] leading-none font-extrabold">${escapeHtml(name)}</h2><p class="mt-2 text-center text-[clamp(18px,2.5vh,28px)] text-white/65">${outcome}</p>${checkout}<div class="mt-6 w-full overflow-hidden rounded-[20px] bg-white/[.07]">${heads}${rows}</div><div class="mt-8 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-[#21cc7d] px-6 text-lg font-bold text-black">${c.matchFinished?'Statistiky':'Pokračovat'}</div></div></div>`;
+    const heads=c.playsSets?`<div class="flex items-center gap-3 px-4 pt-3 text-[10px] font-bold tracking-wide text-white/45 uppercase"><span class="flex-1"></span><span class="min-w-24 text-right">Sety</span><span class="min-w-24 text-right">Legy</span></div>`:'';
+    const checkout=c.isCheckout&&c.checkoutScore>0?`<div class="rounded-[22px] bg-white/[.07] px-4 py-5 text-center"><div class="text-[11px] font-bold tracking-[.14em] text-white/55 uppercase">Checkout</div><div class="mt-1 text-[clamp(52px,8vh,92px)] leading-none font-extrabold tabular-nums" style="color:${accent}">${c.checkoutScore}</div>${c.checkoutDarts.length?`<div class="mt-3 flex flex-wrap justify-center gap-2">${c.checkoutDarts.map(d=>`<span class="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold tabular-nums">${escapeHtml(d)}</span>`).join('')}</div>`:''}</div>`:'';
+    const mark=face(name,m.players[c.winner].photo,'size-[clamp(88px,14vh,148px)] text-4xl text-white',`style="background:${accent}24;box-shadow:0 0 0 6px ${accent}24"`);
+    const hero=`<section class="flex min-h-[280px] flex-col items-center justify-center rounded-[22px] px-6 py-8 text-center lg:h-full 2xl:rounded-[32px]" style="background:radial-gradient(ellipse at top, ${accent}73, #0e1a14 68%)"><div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold" style="color:${accent};background:${accent}29">${c.matchFinished?trophy:''}${escapeHtml(badge)}</div>${avgLine?`<div class="mt-3 rounded-full bg-white/10 px-4 py-2 text-sm font-bold tabular-nums">${escapeHtml(avgLine)}</div>`:''}<div class="relative mt-6 w-fit">${mark}${c.matchFinished?`<span class="absolute -right-1 -bottom-1 grid size-9 place-items-center rounded-full text-[#0b1a13]" style="background:${accent}">${trophy}</span>`:''}</div><h2 class="mt-5 text-[clamp(40px,6vh,76px)] leading-none font-extrabold">${escapeHtml(name)}</h2><p class="mt-2 text-[clamp(18px,2.4vh,30px)] text-white/65">${outcome}</p></section>`;
+    const side=`<aside class="match-glass flex min-h-0 flex-col justify-center gap-4 overflow-y-auto rounded-[22px] p-4 lg:h-full lg:[scrollbar-width:none] 2xl:rounded-[32px] 2xl:p-5">${checkout}<div class="overflow-hidden rounded-[20px] bg-white/[.07]">${heads}${rows}</div></aside>`;
+    return `<div class="${stageGrid} bg-[#0e1a14]">${hero}${side}</div>`;
   };
   const resultView=m=>{
     const winner=Number.isInteger(m.winner)?m.winner:null;
@@ -844,9 +889,11 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
       return `<article class="rounded-[22px] p-4 ${win?'bg-white/[.07] ring-1 ring-[#ff991a]/40':'bg-white/[.05]'}"><div class="flex items-center gap-3">${face(p.name,p.photo,'size-11 text-base text-white','style="background:rgba(255,255,255,.08)"')}<div class="min-w-0 flex-1"><div class="flex items-center gap-2"><b class="truncate text-lg">${escapeHtml(p.name)}</b>${win?`<span class="text-[#ff991a]">${trophy}</span>`:''}</div><div class="text-sm text-white/55">${record}${darts?` · ${cz(darts,'šipka','šipky','šipek')}`:''}</div></div>${avg!=null?`<div class="text-right"><b class="block text-3xl leading-none font-extrabold text-[#4dd984] tabular-nums">${avg}</b><span class="text-xs text-white/45">průměr</span></div>`:''}</div><div class="mt-4 grid grid-cols-3 gap-2">${stats}</div></article>`;
     }).join('');
     const hero=winner!=null
-      ?`<div class="relative mx-auto w-fit">${face(name,m.players[winner].photo,'size-24 text-3xl text-white','style="background:rgba(255,153,26,.16);box-shadow:0 0 0 3px #ff991a"')}<span class="absolute -right-1 -bottom-1 grid size-9 place-items-center rounded-full bg-[#ff991a] text-[#0b1a13]">${trophy}</span></div>`
+      ?`<div class="relative mx-auto w-fit">${face(name,m.players[winner].photo,'size-[clamp(88px,14vh,148px)] text-4xl text-white','style="background:rgba(255,153,26,.16);box-shadow:0 0 0 3px #ff991a"')}<span class="absolute -right-1 -bottom-1 grid size-9 place-items-center rounded-full bg-[#ff991a] text-[#0b1a13]">${trophy}</span></div>`
       :`<span class="grid size-24 place-items-center rounded-full bg-white/10 text-4xl font-bold text-white/70">=</span>`;
-    return `<div class="relative flex min-h-full flex-col items-center px-5 py-6 text-white" style="background:radial-gradient(ellipse at top, rgba(255,153,26,.35), transparent 55%), #0e1a14"><div class="flex w-full max-w-3xl">${homeLink()}</div><div class="flex w-full max-w-3xl flex-1 flex-col items-center py-6"><div class="w-full rounded-[28px] bg-white/[.05] px-5 py-8 text-center ring-1 ring-white/10">${hero}<div class="mt-4 text-sm font-semibold text-[#ff991a]">${winner!=null?'Vítěz zápasu':'Remíza'}</div><h2 class="mt-1 text-[clamp(36px,6vh,64px)] leading-none font-extrabold">${escapeHtml(name)}</h2><p class="mt-2 text-sm text-white/55">${escapeHtml([m.mode==='x01'?'X01':m.mode==='cricket'?'Cricket':m.mode==='aroundClock'?'Kolem hodin':'Count Up',m.title].filter(Boolean).join(' · '))}</p><div class="mx-auto mt-6 flex max-w-xl items-start justify-center">${line}</div></div><h3 class="mt-8 mb-3 w-full text-left text-xl font-bold">Hráči</h3><div class="grid w-full gap-3">${cards}</div></div></div>`;
+    const spot=`<section class="flex min-h-[280px] flex-col items-center justify-center rounded-[22px] px-6 py-8 text-center lg:h-full 2xl:rounded-[32px]" style="background:radial-gradient(ellipse at top, rgba(255,153,26,.45), #0e1a14 68%)">${hero}<div class="mt-5 text-sm font-semibold text-[#ff991a]">${winner!=null?'Vítěz zápasu':'Remíza'}</div><h2 class="mt-1 text-[clamp(40px,6vh,76px)] leading-none font-extrabold">${escapeHtml(name)}</h2><p class="mt-2 text-sm text-white/55">${escapeHtml([m.mode==='x01'?'X01':m.mode==='cricket'?'Cricket':m.mode==='aroundClock'?'Kolem hodin':'Count Up',m.title].filter(Boolean).join(' · '))}</p><div class="mx-auto mt-6 flex w-full max-w-xl items-center justify-center">${line}</div></section>`;
+    const side=`<aside class="match-glass flex min-h-0 flex-col gap-3 overflow-y-auto rounded-[22px] p-4 lg:h-full lg:[scrollbar-width:none] 2xl:rounded-[32px] 2xl:p-5"><h3 class="shrink-0 text-xs font-bold tracking-wider text-white/55 uppercase">Hráči</h3><div class="flex flex-col gap-3">${cards}</div></aside>`;
+    return `<div class="${stageGrid} bg-[#0e1a14]">${spot}${side}</div>`;
   };
   let cover={key:'',timer:0};
   const hideCover=()=>{
@@ -871,6 +918,12 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
   const paintCover=(m,fromLive)=>{
     if(!$('#live-cover')) return;
     if(!m){hideCover();return}
+    if(m.status==='live'&&m.paused){
+      clearTimeout(cover.timer);
+      cover={key:'',timer:0};
+      showCover('p:'+m.id+':'+m.seq,pauseView(m));
+      return;
+    }
     const ceremony=ceremonyOf(m);
     const photos=m.players.map(p=>safePhoto(p.photo)?1:0).join('');
     if(m.status==='finished'){
@@ -901,6 +954,7 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     const badge=$('#live-badge');
     const base='inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase 2xl:text-xs ';
     if(!m){badge.className=base+'bg-white/10 text-white/60';badge.textContent='Bez zápasu';return}
+    if(m.status==='live'&&m.paused){badge.className=base+'bg-[#ff991a] text-[#0b1a13]';badge.textContent='Pauza';return}
     const finished=m.status==='finished';
     badge.className=base+(finished?'bg-[#21cc7d] text-[#0b1a13]':'bg-[#ff5233] text-white');
     badge.innerHTML=finished?'Konec':'<i class="size-1.5 animate-pulse rounded-full bg-white"></i>Živě';
@@ -911,10 +965,12 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     paintBadge(m);
     if(!m){
       board.hidden=true;empty.hidden=false;$("#live-players").dataset.key="";
-      $('#live-meta').textContent='';$('#live-title').textContent='Živý zápas';
+      $('#live-meta').textContent='';      $('#live-title').textContent='Živý zápas';
+      bindClock(null);
       hideCover();
       return;
     }
+    bindClock(m);
     const finished=m.status==='finished';
     board.hidden=false;empty.hidden=true;
     const started=new Date(m.startedAt);
@@ -923,8 +979,6 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     $('#live-progress').innerHTML=progressStrip(m);
     paintPlayers(m);
     $('#live-strip').innerHTML=(m.mode==='cricket'&&m.numbers.length?cricketCard(m):'')+(finished?'':throwStrip(m));
-    const routes=$('#live-routes');
-    if(routes) routes.innerHTML=finished?'':routeBoard(m);
     const box=$('#live-visits');
     const nearTop=box.scrollTop<48;
     const height=box.scrollHeight,top=box.scrollTop;
