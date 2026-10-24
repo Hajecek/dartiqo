@@ -285,6 +285,17 @@
     transform: none;
   }
 }
+@keyframes live-pip {
+  from {
+    transform: scale(0.3);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.live-pip {
+  animation: live-pip 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
 @keyframes dart {
   from {
     opacity: 0;

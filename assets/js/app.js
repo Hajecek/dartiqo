@@ -329,6 +329,13 @@ if(liveBanner&&typeof EventSource!=='undefined'){
   const winnerName=m=>m.winner!=null&&m.players[m.winner]?m.players[m.winner].name:null;
   const progress=m=>(m.setsToWin>1?'Set '+m.set+' · ':'')+'Leg '+m.leg;
   const dartValue=d=>{if(d==='MISS')return 0;if(d==='BULL')return 50;if(d==='25')return 25;return +d.slice(1)*({S:1,D:2,T:3}[d[0]]||1)};
+  const safePhoto=src=>/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(String(src||''))?String(src):'';
+  const face=(name,photo,box,ink='')=>{
+    const src=safePhoto(photo);
+    const letter=escapeHtml(String(name||'?').slice(0,1).toUpperCase());
+    const inner=src?`<img class="size-full object-cover" src="${src}" alt="">`:`<span class="font-semibold leading-none">${letter}</span>`;
+    return `<span class="grid shrink-0 place-items-center overflow-hidden rounded-full ${box}" ${ink}>${inner}</span>`;
+  };
   const dismissed=()=>{try{return sessionStorage.getItem(dismissKey)}catch{return null}};
 
   const liveHero=$('#live-hero');
@@ -344,7 +351,10 @@ if(liveBanner&&typeof EventSource!=='undefined'){
     const active=!finished&&m.active===i&&m.winner==null;
     const won=m.winner===i;
     const right=align==='right';
-    const avatar=`<span class="grid size-10 shrink-0 place-items-center rounded-2xl text-sm font-bold ${won?'bg-emerald-400 text-black':active?'bg-accent text-black shadow-[0_0_24px_-4px_#faff00aa]':'bg-white/[.07] text-zinc-300'}">${escapeHtml(p.name.slice(0,1).toUpperCase())}</span>`;
+    const src=safePhoto(p.photo);
+    const avatar=src
+      ?`<span class="grid size-10 shrink-0 overflow-hidden rounded-2xl ${won?'ring-2 ring-emerald-400':active?'ring-2 ring-accent':''}"><img class="size-full object-cover" src="${src}" alt=""></span>`
+      :`<span class="grid size-10 shrink-0 place-items-center rounded-2xl text-sm font-bold ${won?'bg-emerald-400 text-black':active?'bg-accent text-black shadow-[0_0_24px_-4px_#faff00aa]':'bg-white/[.07] text-zinc-300'}">${escapeHtml(p.name.slice(0,1).toUpperCase())}</span>`;
     const state=won?'<span class="text-emerald-300">Vítěz</span>':active?'<span class="flex items-center gap-1.5 text-accent"><i class="size-1.5 animate-pulse rounded-full bg-accent"></i>Na tahu</span>':`<span>Ø ${p.average.toFixed(1)}</span>`;
     return `<div class="flex min-w-0 flex-col gap-3 ${right?'items-end text-right':''}">
 <span class="flex max-w-full min-w-0 items-center gap-3 ${right?'flex-row-reverse':''}">${avatar}<span class="min-w-0"><strong class="block truncate text-sm font-semibold">${escapeHtml(p.name)}</strong><small class="block text-[11px] font-medium text-zinc-500">${state}</small></span></span>
@@ -356,8 +366,12 @@ ${heroLegs(m,p,align)}
     const finished=m.status==='finished';
     const active=!finished&&m.active===i&&m.winner==null;
     const won=m.winner===i;
+    const src=safePhoto(p.photo);
+    const avatar=src
+      ?`<span class="grid size-8 shrink-0 overflow-hidden rounded-xl"><img class="size-full object-cover" src="${src}" alt=""></span>`
+      :`<span class="grid size-8 shrink-0 place-items-center rounded-xl text-xs font-bold ${won?'bg-emerald-400 text-black':active?'bg-accent text-black':'bg-white/[.07] text-zinc-300'}">${escapeHtml(p.name.slice(0,1).toUpperCase())}</span>`;
     return `<div class="flex items-center gap-3 rounded-2xl px-3 py-2.5 ${active?'bg-accent/[.07] ring-1 ring-accent/30 ring-inset':won?'bg-emerald-400/10':''}">
-<span class="grid size-8 shrink-0 place-items-center rounded-xl text-xs font-bold ${won?'bg-emerald-400 text-black':active?'bg-accent text-black':'bg-white/[.07] text-zinc-300'}">${escapeHtml(p.name.slice(0,1).toUpperCase())}</span>
+${avatar}
 <strong class="min-w-0 flex-1 truncate text-sm">${escapeHtml(p.name)}</strong>${heroLegs(m,p)}
 <b class="num w-16 text-right text-3xl ${won?'text-emerald-300':active?'text-accent':'text-zinc-400'}">${escapeHtml(p.score)}</b>
 </div>`;
@@ -479,7 +493,7 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     grid.style.background=MC.amber;
     grid.innerHTML='<i class="pointer-events-none absolute top-0 left-0 z-0 transition-[transform,width,height,background-color] duration-500 ease-[cubic-bezier(.65,0,.35,1)]" data-focus aria-hidden="true"></i>'
       +m.players.map((p,i)=>`<article class="relative z-[1] flex min-h-0 min-w-0 flex-col p-[1em]" style="color:${MC.ink};font-size:${base}" data-i="${i}">
-<div class="flex min-w-0 items-center gap-[.45em]"><span class="grid size-[1.6em] shrink-0 place-items-center rounded-full text-[.7em] font-bold" style="background:${MC.ink}26">${escapeHtml(p.name.slice(0,1).toUpperCase())}</span><strong class="min-w-0 flex-1 truncate font-semibold">${escapeHtml(p.name)}</strong>${p.bot?cpuIcon.replace('size-3','size-[1em]'):''}</div>
+<div class="flex min-w-0 items-center gap-[.45em]"><span class="grid size-[1.7em] shrink-0 place-items-center overflow-hidden rounded-full text-[.7em] font-bold" style="background:${MC.ink}26" data-avatar>${escapeHtml(p.name.slice(0,1).toUpperCase())}</span><strong class="min-w-0 flex-1 truncate font-semibold">${escapeHtml(p.name)}</strong>${p.bot?cpuIcon.replace('size-3','size-[1em]'):''}</div>
 <div class="flex min-h-0 flex-1 items-center gap-[.35em]"><strong class="flex min-w-0 flex-1 items-center leading-none font-bold tracking-tight tabular-nums transition-colors duration-500" style="font-size:${big}" data-score></strong>
 <div class="flex shrink-0 flex-col items-end justify-center gap-[.22em]" data-chips></div></div>
 </article>`).join('');
@@ -537,6 +551,12 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     if(fresh){buildPanels(grid,m,cols,rows);grid.dataset.key=key}
     m.players.forEach((p,i)=>{
       const panel=grid.querySelector(`article[data-i="${i}"]`);
+      const avatar=$('[data-avatar]',panel);
+      const src=safePhoto(p.photo);
+      if(avatar&&avatar.dataset.src!==src){
+        avatar.dataset.src=src;
+        avatar.innerHTML=src?`<img class="size-full object-cover" src="${src}" alt="">`:escapeHtml(p.name.slice(0,1).toUpperCase());
+      }
       const active=onTurn(m,i);
       panel.setAttribute('aria-current',active?'true':'false');
       const score=$('[data-score]',panel);
@@ -646,6 +666,9 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
   const visitRow=(m,v,open,n)=>{
     const name=m.players[v.player]?.name||'';
     const tint=playerColor(v.player);
+    const who=safePhoto(m.players[v.player]?.photo)
+      ?face(name,m.players[v.player].photo,'size-6 text-[10px] text-white',`style="background:${tint}"`)
+      :`<i class="size-2 shrink-0 rounded-full" style="background:${tint}" aria-hidden="true"></i>`;
     const total=v.darts.reduce((s,d)=>s+dartValue(d),0);
     const score=open?total:v.bust?null:v.score;
     const scoreColor=v.bust||score===180?MC.red:v.checkout?MC.positive:open?'#fefc03':'#fff';
@@ -654,7 +677,7 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
       :'<span class="text-white/30">—</span>';
     const note=v.bust?'Přehoz':v.checkout?'Zavřeno':open?'Hází':'';
     return `<div class="grid shrink-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_auto] items-center gap-x-2 rounded-xl px-1.5 py-2 text-[clamp(13px,1.55vh,22px)] ${open?'bg-[#fefc03]/18 ring-1 ring-[#fefc03]/35 ring-inset':v.bust?'bg-[#ff453a]/12':v.checkout?'bg-[#4dd984]/12':n%2?'bg-white/[.03]':''}">
-<span class="flex min-w-0 items-center gap-1.5"><i class="size-2 shrink-0 rounded-full" style="background:${tint}" aria-hidden="true"></i><strong class="truncate font-semibold">${escapeHtml(name)}</strong>${open?'<span class="shrink-0 rounded bg-[#fefc03] px-1 py-px text-[9px] font-extrabold tracking-wide text-black uppercase">teď</span>':''}</span>
+<span class="flex min-w-0 items-center gap-1.5">${who}<strong class="truncate font-semibold">${escapeHtml(name)}</strong>${open?'<span class="shrink-0 rounded bg-[#fefc03] px-1 py-px text-[9px] font-extrabold tracking-wide text-black uppercase">teď</span>':''}</span>
 <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 leading-none">${marks}${note&&!open?`<span class="text-[.65em] font-semibold text-white/40">${note}</span>`:''}</span>
 <span class="text-right leading-none"><b class="text-[1.35em] font-extrabold tabular-nums" style="color:${scoreColor}">${score==null?'BUST':score}</b></span>
 </div>`;
@@ -720,6 +743,160 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     return html;
   };
 
+  const czWord=(n,one,few,many)=>n===1?one:(n>=2&&n<=4)?few:many;
+  const cz=(n,one,few,many)=>`${n} ${czWord(n,one,few,many)}`;
+  const legAverage=(m,i)=>{
+    if(m.mode!=='x01') return null;
+    let points=0,darts=0;
+    for(const v of m.visits||[]){
+      if(v.player!==i||(v.leg||1)!==m.leg||(v.set||1)!==(m.set||1)) continue;
+      points+=+v.score||0;
+      darts+=(v.darts||[]).length;
+    }
+    return darts?points/darts*3:null;
+  };
+  // Telefon po zavření legu chvíli drží ceremonii. Než přijde další leg, legWinner sedí na vítězi.
+  const ceremonyOf=m=>{
+    if(!m) return null;
+    let winner=Number.isInteger(m.legWinner)?m.legWinner:null;
+    const hit=(m.visits||[]).filter(v=>(v.set||1)===(m.set||1)&&(v.leg||1)===m.leg&&v.checkout&&!v.bust);
+    if(winner==null&&hit.length) winner=hit[hit.length-1].player;
+    if(winner==null||!m.players[winner]) return null;
+    if(m.status==='live'&&winner==null) return null;
+    const visit=hit.filter(v=>v.player===winner).at(-1)||null;
+    const legs=m.players.map(p=>p.legs||0);
+    const sets=m.players.map(p=>p.sets||0);
+    return {
+      winner,
+      matchFinished:m.status==='finished',
+      setClosed:m.setsToWin>1&&m.status!=='finished'&&legs[winner]>=m.legsToWin,
+      setJustWon:m.setsToWin>1&&legs[winner]>=m.legsToWin,
+      leg:m.leg,
+      legs,sets,
+      playsSets:m.setsToWin>1,
+      isCheckout:!!visit,
+      byBullOff:!!m.bullOff&&!visit,
+      checkoutScore:visit?+visit.score||0:0,
+      checkoutDarts:visit?visit.darts||[]:[],
+      legSlots:m.legSlots>0?m.legSlots:Math.max(m.legsToWin,...legs,1),
+      setSlots:m.setSlots>0?m.setSlots:Math.max(m.setsToWin,...sets,1)
+    };
+  };
+  const trophy='<svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12v2h2.2c.7 0 1.3.6 1.3 1.3 0 2.1-1.4 3.9-3.3 4.5A7 7 0 0 1 13 16.9V19h3.2v2H7.8v-2H11v-2.1a7 7 0 0 1-5.2-7.1A4.8 4.8 0 0 1 2.5 5.3C2.5 4.6 3.1 4 3.8 4H6V2zm0 4H4.7c.4 1.3 1.4 2.2 2.6 2.6A7 7 0 0 1 6 6.4V6zm12 0v.4a7 7 0 0 1-1.3 2.2c1.2-.4 2.2-1.3 2.6-2.6H18z"/></svg>';
+  const homeLink=()=>{
+    const href=$('a[aria-label="Domů"]')?.getAttribute('href')||url('/app');
+    return `<a class="match-glass grid size-11 place-items-center rounded-[14px] text-white hover:bg-white/15" href="${escapeHtml(href)}" aria-label="Domů"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg></a>`;
+  };
+  const ceremonyView=(m,c)=>{
+    const accent=c.matchFinished?MC.amber:c.isCheckout?MC.green:MC.coral;
+    const name=m.players[c.winner].name;
+    const badge=c.matchFinished?'Konec zápasu':c.setClosed?'Set hotový':c.byBullOff?`Leg ${c.leg} · rozhoz na střed`:c.isCheckout?`Leg ${c.leg} · zavřeno`:`Leg ${c.leg}`;
+    const outcome=c.matchFinished?'vyhrává zápas':c.setClosed?'vyhrává set':`vyhrává leg ${c.leg}`;
+    const own=m.legAverage!=null&&Number.isFinite(+m.legAverage)?(+m.legAverage).toFixed(1):null;
+    const mined=legAverage(m,c.winner);
+    const avg=own||(mined==null?null:mined.toFixed(1));
+    const avgLine=avg?(own?`Tvůj průměr za leg ${avg}`:`Průměr za leg ${avg}`):'';
+    const pips=(value,total,pulse)=>total>7?'':`<span class="flex items-center gap-1" aria-hidden="true">${Array.from({length:total},(_,n)=>{
+      const on=n<value,newest=pulse&&value>0&&n===value-1;
+      return `<i class="rounded-full ${newest&&!reduced?'live-pip':''}" style="width:${newest?10:8}px;height:${newest?10:8}px;background:${on?accent:'rgba(255,255,255,.15)'}"></i>`;
+    }).join('')}</span>`;
+    const cell=(value,total,pulse)=>`<span class="flex w-28 items-center justify-end gap-2">${pips(value,total,pulse)}<b class="min-w-6 text-right text-[clamp(22px,3vh,36px)] leading-none tabular-nums" style="color:${pulse?accent:'#fff'}">${value}</b></span>`;
+    const rows=m.players.map((p,i)=>{
+      const win=i===c.winner;
+      return `<div class="flex items-center gap-3 px-4 py-3 ${i?'border-t border-white/10':''}">${face(p.name,p.photo,'size-9 text-sm text-white',`style="background:${playerColor(i)}"`)}<span class="min-w-0 flex-1 truncate ${win?'font-semibold text-white':'text-white/70'}">${escapeHtml(p.name)}</span>${c.playsSets?cell(c.sets[i]||0,c.setSlots,win&&c.setJustWon):''}${cell(c.legs[i]||0,c.legSlots,win)}</div>`;
+    }).join('');
+    const heads=c.playsSets?`<div class="flex items-center gap-3 px-4 pt-3 text-[10px] font-bold tracking-wide text-white/45 uppercase"><span class="flex-1"></span><span class="w-28 text-right">Sety</span><span class="w-28 text-right">Legy</span></div>`:'';
+    const checkout=c.isCheckout&&c.checkoutScore>0?`<div class="mt-7 w-full rounded-3xl bg-white/[.07] px-4 py-5 text-center"><div class="text-sm font-semibold text-white/60">Checkout</div><div class="mt-1 text-[clamp(56px,8vh,88px)] leading-none font-extrabold tabular-nums" style="color:${accent}">${c.checkoutScore}</div>${c.checkoutDarts.length?`<div class="mt-3 flex flex-wrap justify-center gap-2">${c.checkoutDarts.map(d=>`<span class="rounded-full bg-white/12 px-3 py-1 text-sm font-semibold tabular-nums">${escapeHtml(d)}</span>`).join('')}</div>`:''}</div>`:'';
+    const mark=face(name,m.players[c.winner].photo,'size-24 text-3xl text-white',`style="background:${accent}24;box-shadow:0 0 0 6px ${accent}24"`);
+    return `<div class="relative flex min-h-full flex-col items-center px-5 py-6 text-white" style="background:radial-gradient(ellipse at top, ${accent}55, transparent 58%), #0e1a14"><div class="flex w-full max-w-xl">${homeLink()}</div><div class="flex w-full max-w-xl flex-1 flex-col items-center justify-center py-6"><div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold" style="color:${accent};background:${accent}29">${c.matchFinished?trophy:''}${escapeHtml(badge)}</div>${avgLine?`<div class="mt-3 rounded-full bg-white/10 px-4 py-2 text-sm font-bold tabular-nums">${escapeHtml(avgLine)}</div>`:''}<div class="relative mt-7 w-fit">${mark}${c.matchFinished?`<span class="absolute -right-1 -bottom-1 grid size-9 place-items-center rounded-full text-[#0b1a13]" style="background:${accent}">${trophy}</span>`:''}</div><h2 class="mt-5 text-center text-[clamp(36px,6vh,68px)] leading-none font-extrabold">${escapeHtml(name)}</h2><p class="mt-2 text-center text-[clamp(18px,2.5vh,28px)] text-white/65">${outcome}</p>${checkout}<div class="mt-6 w-full overflow-hidden rounded-[20px] bg-white/[.07]">${heads}${rows}</div><div class="mt-8 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-[#21cc7d] px-6 text-lg font-bold text-black">${c.matchFinished?'Statistiky':'Pokračovat'}</div></div></div>`;
+  };
+  const resultView=m=>{
+    const winner=Number.isInteger(m.winner)?m.winner:null;
+    const name=winner!=null?m.players[winner].name:'Vyrovnaná hra';
+    const playsSets=m.setsToWin>1;
+    const order=m.players.map((_,i)=>i).sort((a,b)=>{
+      if(winner===a) return -1;
+      if(winner===b) return 1;
+      if(playsSets&&m.players[a].sets!==m.players[b].sets) return m.players[b].sets-m.players[a].sets;
+      return m.players[b].legs-m.players[a].legs;
+    });
+    const line=m.players.map((p,i)=>{
+      const primary=playsSets?p.sets:p.legs;
+      const word=playsSets?czWord(primary,'set','sety','setů'):czWord(primary,'leg','legy','legů');
+      return `<div class="flex min-w-0 flex-1 flex-col items-center gap-1">${face(p.name,p.photo,'size-11 text-base text-white','style="background:rgba(255,255,255,.08)"')}<b class="text-[clamp(40px,6vh,72px)] leading-none font-extrabold tabular-nums" style="color:${winner===i?MC.amber:'#fff'}">${primary}</b><span class="text-[11px] font-bold tracking-wide text-white/45 uppercase">${word}</span><span class="max-w-full truncate text-sm text-white/70">${escapeHtml(p.name)}</span></div>${i<m.players.length-1?'<span class="self-center px-1 text-3xl font-bold text-white/30">:</span>':''}`;
+    }).join('');
+    const chip=(value,label)=>`<span class="flex flex-col items-center gap-1 rounded-2xl bg-white/[.06] px-2 py-3"><b class="text-[clamp(20px,2.6vh,32px)] leading-none font-extrabold tabular-nums">${value}</b><span class="text-center text-[10px] font-bold tracking-wide text-white/45 uppercase">${label}</span></span>`;
+    const cards=order.map(i=>{
+      const p=m.players[i];
+      const visits=(m.visits||[]).filter(v=>v.player===i);
+      const darts=visits.reduce((n,v)=>n+(v.darts||[]).length,0);
+      const best=visits.reduce((n,v)=>Math.max(n,v.bust?0:+v.score||0),0);
+      const checks=visits.filter(v=>v.checkout&&!v.bust);
+      const checkout=checks.reduce((n,v)=>Math.max(n,+v.score||0),0);
+      const n180=visits.filter(v=>!v.bust&&+v.score===180).length;
+      const busts=visits.filter(v=>v.bust).length;
+      const win=winner===i;
+      const avg=m.mode==='x01'?formatAverage(liveAverage(m,p,i)):null;
+      const stats=m.mode==='x01'
+        ?chip(best,'Nejlepší kolo')+chip(checkout||'—','Checkout')+chip(n180,'180')+chip(busts,'Přehozy')+chip(darts,'Šipky')+chip(checks.length,'Zavření')
+        :chip(escapeHtml(String(p.score)),'Skóre')+chip(visits.length,'Kola')+chip(darts,'Šipky');
+      const record=playsSets?`${cz(p.sets,'set','sety','setů')} · ${cz(p.legs,'leg','legy','legů')}`:cz(p.legs,'leg','legy','legů');
+      return `<article class="rounded-[22px] p-4 ${win?'bg-white/[.07] ring-1 ring-[#ff991a]/40':'bg-white/[.05]'}"><div class="flex items-center gap-3">${face(p.name,p.photo,'size-11 text-base text-white','style="background:rgba(255,255,255,.08)"')}<div class="min-w-0 flex-1"><div class="flex items-center gap-2"><b class="truncate text-lg">${escapeHtml(p.name)}</b>${win?`<span class="text-[#ff991a]">${trophy}</span>`:''}</div><div class="text-sm text-white/55">${record}${darts?` · ${cz(darts,'šipka','šipky','šipek')}`:''}</div></div>${avg!=null?`<div class="text-right"><b class="block text-3xl leading-none font-extrabold text-[#4dd984] tabular-nums">${avg}</b><span class="text-xs text-white/45">průměr</span></div>`:''}</div><div class="mt-4 grid grid-cols-3 gap-2">${stats}</div></article>`;
+    }).join('');
+    const hero=winner!=null
+      ?`<div class="relative mx-auto w-fit">${face(name,m.players[winner].photo,'size-24 text-3xl text-white','style="background:rgba(255,153,26,.16);box-shadow:0 0 0 3px #ff991a"')}<span class="absolute -right-1 -bottom-1 grid size-9 place-items-center rounded-full bg-[#ff991a] text-[#0b1a13]">${trophy}</span></div>`
+      :`<span class="grid size-24 place-items-center rounded-full bg-white/10 text-4xl font-bold text-white/70">=</span>`;
+    return `<div class="relative flex min-h-full flex-col items-center px-5 py-6 text-white" style="background:radial-gradient(ellipse at top, rgba(255,153,26,.35), transparent 55%), #0e1a14"><div class="flex w-full max-w-3xl">${homeLink()}</div><div class="flex w-full max-w-3xl flex-1 flex-col items-center py-6"><div class="w-full rounded-[28px] bg-white/[.05] px-5 py-8 text-center ring-1 ring-white/10">${hero}<div class="mt-4 text-sm font-semibold text-[#ff991a]">${winner!=null?'Vítěz zápasu':'Remíza'}</div><h2 class="mt-1 text-[clamp(36px,6vh,64px)] leading-none font-extrabold">${escapeHtml(name)}</h2><p class="mt-2 text-sm text-white/55">${escapeHtml([m.mode==='x01'?'X01':m.mode==='cricket'?'Cricket':m.mode==='aroundClock'?'Kolem hodin':'Count Up',m.title].filter(Boolean).join(' · '))}</p><div class="mx-auto mt-6 flex max-w-xl items-start justify-center">${line}</div></div><h3 class="mt-8 mb-3 w-full text-left text-xl font-bold">Hráči</h3><div class="grid w-full gap-3">${cards}</div></div></div>`;
+  };
+  let cover={key:'',timer:0};
+  const hideCover=()=>{
+    clearTimeout(cover.timer);
+    cover={key:'',timer:0};
+    const el=$('#live-cover');
+    if(!el) return;
+    el.hidden=true;
+    el.dataset.key='';
+    el.innerHTML='';
+    $('#live-board')?.removeAttribute('aria-hidden');
+  };
+  const showCover=(key,html)=>{
+    const el=$('#live-cover');
+    if(!el) return;
+    if(el.dataset.key===key&&!el.hidden) return;
+    el.dataset.key=key;
+    el.innerHTML=html;
+    el.hidden=false;
+    $('#live-board')?.setAttribute('aria-hidden','true');
+  };
+  const paintCover=(m,fromLive)=>{
+    if(!$('#live-cover')) return;
+    if(!m){hideCover();return}
+    const ceremony=ceremonyOf(m);
+    const photos=m.players.map(p=>safePhoto(p.photo)?1:0).join('');
+    if(m.status==='finished'){
+      const known=cover.key==='c:'+m.id||cover.key==='r:'+m.id;
+      if(!known){
+        clearTimeout(cover.timer);
+        if(fromLive&&ceremony){
+          cover.key='c:'+m.id;
+          cover.timer=setTimeout(()=>{
+            if(cover.key!=='c:'+m.id) return;
+            cover.key='r:'+m.id;
+            if(current&&current.id===m.id&&current.status==='finished') paintCover(current,false);
+          },4500);
+        }else cover.key='r:'+m.id;
+      }
+      const phase=cover.key.startsWith('c:')?'ceremony':'result';
+      if(phase==='ceremony'&&ceremony) showCover('c:'+m.id+':'+photos,ceremonyView(m,ceremony));
+      else showCover('r:'+m.id+':'+photos,resultView(m));
+      return;
+    }
+    clearTimeout(cover.timer);
+    cover={key:'',timer:0};
+    if(ceremony) showCover('l:'+m.id+':'+m.set+':'+m.leg+':'+ceremony.winner+':'+photos,ceremonyView(m,ceremony));
+    else hideCover();
+  };
+
   const paintBadge=m=>{
     const badge=$('#live-badge');
     const base='inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase 2xl:text-xs ';
@@ -729,12 +906,13 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     badge.innerHTML=finished?'Konec':'<i class="size-1.5 animate-pulse rounded-full bg-white"></i>Živě';
   };
 
-  const paintPage=m=>{
+  const paintPage=(m,fromLive=false)=>{
     const board=$('#live-board'),empty=$('#live-empty');
     paintBadge(m);
     if(!m){
       board.hidden=true;empty.hidden=false;$("#live-players").dataset.key="";
       $('#live-meta').textContent='';$('#live-title').textContent='Živý zápas';
+      hideCover();
       return;
     }
     const finished=m.status==='finished';
@@ -752,11 +930,13 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     const height=box.scrollHeight,top=box.scrollTop;
     box.innerHTML=visitLog(m,finished);
     box.scrollTop=nearTop?0:top+(box.scrollHeight-height);
+    paintCover(m,fromLive);
   };
 
   let watchedLive=false,reloadQueued=false,lastEvent=0,pulling=false,source=null;
   const paint=m=>{
-    current=m;paintBanner(m);if(livePage)paintPage(m);
+    const fromLive=!!(current&&m&&current.id===m.id&&current.status==='live'&&m.status==='finished');
+    current=m;paintBanner(m);if(livePage)paintPage(m,fromLive);
     if(!liveHero)return;
     const finished=m?.status==='finished';
     // Dohraný zápas už je v Posledních hrách, výsledek ukážeme jen při sledování konce

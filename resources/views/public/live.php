@@ -11,6 +11,7 @@ require_once __DIR__ . '/../partials/ui.php';
 <button class="match-glass inline-flex h-11 shrink-0 items-center gap-2 rounded-[14px] px-3.5 text-sm font-semibold whitespace-nowrap text-white hover:bg-white/15 2xl:h-14 2xl:px-5 2xl:text-base [&_svg]:size-5" type="button" data-live-fullscreen title="Celá obrazovka"><?= dartiqo_i('expand') ?><span class="max-sm:hidden" data-live-fullscreen-label>Celá obrazovka</span></button>
 </header>
 
+<div class="relative flex min-h-0 flex-1 flex-col" id="live-stage">
 <section class="match-glass flex flex-1 flex-col items-center justify-center gap-4 rounded-[22px] px-6 py-16 text-center" id="live-empty">
 <span class="grid size-16 place-items-center rounded-full bg-[#fefc03]/15 text-[#fefc03] 2xl:size-24 [&_svg]:size-7 2xl:[&_svg]:size-11"><?= dartiqo_i('target') ?></span>
 <h2 class="text-white 2xl:text-3xl!">Čekám na zápas z mobilu</h2>
@@ -33,4 +34,6 @@ require_once __DIR__ . '/../partials/ui.php';
 <div class="mt-1 flex flex-col gap-0.5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:[scrollbar-width:none]" id="live-visits"></div>
 </section>
 </section>
+<div class="fixed inset-0 z-40 overflow-y-auto bg-[#0e1a14]" id="live-cover" hidden></div>
+</div>
 </main>

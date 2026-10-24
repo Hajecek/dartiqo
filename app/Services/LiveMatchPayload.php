@@ -59,6 +59,11 @@ final class LiveMatchPayload
                 'setsToWin' => self::int($input['setsToWin'] ?? 1, 1, 11),
                 'active' => self::int($input['active'] ?? 0, 0, $count - 1),
                 'winner' => self::index($input['winner'] ?? null, $count),
+                'legWinner' => self::index($input['legWinner'] ?? null, $count),
+                'bullOff' => (bool) ($input['bullOff'] ?? false),
+                'legSlots' => self::int($input['legSlots'] ?? 0, 0, 31),
+                'setSlots' => self::int($input['setSlots'] ?? 0, 0, 21),
+                'legAverage' => self::average($input['legAverage'] ?? null),
                 'numbers' => self::numbers($input['numbers'] ?? []),
                 'players' => $players,
                 'currentDarts' => self::darts($input['currentDarts'] ?? [], 3),
@@ -82,7 +87,7 @@ final class LiveMatchPayload
             }
         }
 
-        return [
+        $player = [
             'name' => self::text($raw['name'] ?? '', 40) ?: 'Hráč',
             'bot' => (bool) ($raw['bot'] ?? false),
             'score' => self::text($raw['score'] ?? '', 12),
@@ -97,6 +102,12 @@ final class LiveMatchPayload
             'out' => self::outRule($raw['out'] ?? ''),
             'marks' => $marks,
         ];
+        $photo = self::photo($raw['photo'] ?? '');
+        if ($photo !== '') {
+            $player['photo'] = $photo;
+        }
+
+        return $player;
     }
 
     /** @return list<array<string, mixed>> */
@@ -170,6 +181,25 @@ final class LiveMatchPayload
         $rule = is_scalar($value) ? (string) $value : '';
 
         return in_array($rule, ['double', 'straight', 'master'], true) ? $rule : '';
+    }
+
+    private static function average(mixed $value): ?float
+    {
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        return round(max(0, min(180, (float) $value)), 1);
+    }
+
+    /** Jen malý JPEG z telefonu. Cokoli jiného se do stránky nedostane. */
+    private static function photo(mixed $value): string
+    {
+        if (!is_string($value) || $value === '' || strlen($value) > 20_000) {
+            return '';
+        }
+
+        return preg_match('#\Adata:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}\z#', $value) === 1 ? $value : '';
     }
 
     private static function text(mixed $value, int $max): string
