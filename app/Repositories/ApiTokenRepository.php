@@ -54,6 +54,11 @@ final class ApiTokenRepository
 
     public function revoke(string $token): void
     {
-        $this->db->query('DELETE FROM api_tokens WHERE token_hash = ?', [hash('sha256', $token)]);
+        $hash = hash('sha256', $token);
+        $row = $this->db->fetch('SELECT id FROM api_tokens WHERE token_hash = ?', [$hash]);
+        if ($row !== null) {
+            (new FcmTokenRepository($this->db))->deactivateForApiToken((int) $row['id'], 'device_revoked');
+        }
+        $this->db->query('DELETE FROM api_tokens WHERE token_hash = ?', [$hash]);
     }
 }

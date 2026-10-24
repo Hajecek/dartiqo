@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Controllers\Api\AuthController as ApiAuthController;
+use App\Controllers\Api\DeviceController;
 use App\Controllers\Api\MatchController;
 use App\Controllers\Api\LiveMatchController;
 use App\Controllers\Api\FriendController;
@@ -66,6 +67,7 @@ $router->get('/register/availability', [AuthController::class, 'availability']);
 
 $router->post('/api/v1/auth/login', [ApiAuthController::class, 'login']);
 $router->post('/api/v1/auth/logout', [ApiAuthController::class, 'logout']);
+$router->post('/api/v1/devices/push', [DeviceController::class, 'push']);
 $router->post('/api/v1/auth/social/{provider}', [ApiAuthController::class, 'social']);
 $router->get('/api/v1/me', [ApiAuthController::class, 'me']);
 $router->get('/api/v1/people', [PeopleController::class, 'index']);
