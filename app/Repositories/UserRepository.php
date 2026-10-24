@@ -46,6 +46,47 @@ final class UserRepository
         return $this->db->fetch('SELECT 1 FROM users WHERE email = ? AND id != ?', [$email, $exceptId]) !== null;
     }
 
+    /**
+     * Aktivní účty podle jména, username, nebo přesného e-mailu. E-mail ve výsledku není.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function searchDirectory(string $query, int $exceptId): array
+    {
+        $needle = trim($query);
+        if (str_starts_with($needle, '@') && !str_contains(substr($needle, 1), '@')) {
+            $needle = trim(substr($needle, 1));
+        }
+        $needle = mb_substr($needle, 0, 40);
+        if (mb_strlen($needle) < 2) {
+            return [];
+        }
+
+        $escaped = addcslashes($needle, '%_\\');
+        $like = '%' . $escaped . '%';
+        $prefix = $escaped . '%';
+        $email = filter_var($needle, FILTER_VALIDATE_EMAIL) ? mb_strtolower($needle) : null;
+        $emailClause = $email !== null ? ' OR email = ?' : '';
+        $params = [$exceptId, $like, $like, $like, $like];
+        if ($email !== null) {
+            $params[] = $email;
+        }
+        $params[] = $needle;
+        $params[] = $prefix;
+        $rows = $this->db->fetchAll(
+            'SELECT id, username, first_name, last_name, avatar_path, profile_revision
+             FROM users
+             WHERE status = \'active\' AND id != ?
+               AND (username LIKE ? OR first_name LIKE ? OR last_name LIKE ?
+                    OR CONCAT(first_name, \' \', last_name) LIKE ?' . $emailClause . ')
+             ORDER BY CASE WHEN username = ? THEN 0 WHEN username LIKE ? THEN 1 ELSE 2 END, username
+             LIMIT 20',
+            $params
+        );
+
+        return array_map(self::toDirectory(...), $rows);
+    }
+
     /** @param array{username:string,email:string,password:string,first_name:string,last_name:string,avatar_path?:?string} $data */
     public function create(array $data): int
     {
@@ -131,6 +172,25 @@ final class UserRepository
             'plan' => $plan,
             'planExpiresAt' => $expires,
             'role' => $user['role'],
+        ];
+    }
+
+    /**
+     * Veřejná kartička pro hledání hráčů. Bez e-mailu a dalších údajů účtu.
+     *
+     * @param array<string, mixed> $user
+     * @return array<string, mixed>
+     */
+    public static function toDirectory(array $user): array
+    {
+        $revision = (int) ($user['profile_revision'] ?? 1);
+
+        return [
+            'id' => (int) $user['id'],
+            'username' => $user['username'],
+            'first' => $user['first_name'],
+            'last' => $user['last_name'],
+            'photo' => $user['avatar_path'] ? '/' . $user['avatar_path'] . '?v=' . $revision : null,
         ];
     }
 }
