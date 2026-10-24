@@ -9,8 +9,118 @@ use PDOException;
 
 final class MatchRepository
 {
+    /** Rozehraný zápas bez aktualizace déle než tohle už web neukazuje (zavřená aplikace). */
+    private const LIVE_STALE_MINUTES = 45;
+    /** Jak dlouho po konci zůstane na živé obrazovce výsledek. */
+    private const LIVE_FINISHED_SECONDS = 90;
+
     public function __construct(private readonly Database $db)
     {
+    }
+
+    /**
+     * Uloží živý snímek zápasu. Stejný client_id později přepíše dohraný zápas.
+     * Starší pořadí (seq) nepřepíše novější snímek. Opuštěný nedohraný zápas smaže.
+     *
+     * @param array<string, mixed> $state
+     */
+    public function saveLive(int $userId, string $clientId, string $status, int $seq, array $state, string $startedAt): void
+    {
+        if ($status === 'abandoned') {
+            $this->db->query(
+                'DELETE FROM matches
+                 WHERE user_id = :user_id AND client_id = :client_id AND seq <= :seq
+                   AND JSON_EXTRACT(log, \'$.version\') IS NULL',
+                ['user_id' => $userId, 'client_id' => $clientId, 'seq' => $seq]
+            );
+
+            return;
+        }
+
+        $now = gmdate('Y-m-d H:i:s');
+        $this->db->transaction(function (Database $db) use ($userId, $clientId, $status, $seq, $state, $startedAt, $now): void {
+            $existing = $db->fetch(
+                'SELECT id, seq, log FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE',
+                ['user' => $userId, 'client' => $clientId]
+            );
+            if ($existing === null) {
+                $row = $this->liveColumns($status, $seq, $state, $now, $startedAt);
+                for ($attempt = 0; ; $attempt++) {
+                    try {
+                        $db->insert('matches', $row + [
+                            'public_id' => self::newPublicId(),
+                            'user_id' => $userId,
+                            'client_id' => $clientId,
+                        ]);
+
+                        return;
+                    } catch (PDOException $e) {
+                        if ($e->getCode() !== '23000' || $attempt >= 2) {
+                            throw $e;
+                        }
+                        $existing = $db->fetch(
+                            'SELECT id, seq, log FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE',
+                            ['user' => $userId, 'client' => $clientId]
+                        );
+                        if ($existing !== null) {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ((int) $existing['seq'] >= $seq) {
+                return;
+            }
+
+            $previous = json_decode((string) $existing['log'], true);
+            if (is_array($previous) && array_key_exists('version', $previous)) {
+                $previous['board'] = $state;
+                $db->update('matches', [
+                    'seq' => $seq,
+                    'updated_at' => $now,
+                    'log' => self::json($previous),
+                ], 'id = :id', ['id' => (int) $existing['id']]);
+
+                return;
+            }
+
+            $db->update('matches', $this->liveColumns($status, $seq, $state, $now, null), 'id = :id', ['id' => (int) $existing['id']]);
+        });
+    }
+
+    /** @return array<string, mixed>|null Zápas, který má web právě ukazovat živě. */
+    public function currentLive(int $userId): ?array
+    {
+        $row = $this->db->fetch(
+            'SELECT client_id, status, seq, started_at, updated_at, log FROM matches
+             WHERE user_id = :user_id
+               AND JSON_EXTRACT(log, \'$.board\') IS NOT NULL
+               AND (
+                    (status = \'live\' AND updated_at > UTC_TIMESTAMP() - INTERVAL ' . self::LIVE_STALE_MINUTES . ' MINUTE)
+                    OR (status = \'finished\' AND finished_at > UTC_TIMESTAMP() - INTERVAL ' . self::LIVE_FINISHED_SECONDS . ' SECOND)
+               )
+             ORDER BY updated_at DESC
+             LIMIT 1',
+            ['user_id' => $userId]
+        );
+        if ($row === null) {
+            return null;
+        }
+
+        $log = json_decode((string) $row['log'], true);
+        $state = is_array($log['board'] ?? null) ? $log['board'] : null;
+        if ($state === null) {
+            return null;
+        }
+
+        return [
+            'id' => $row['client_id'],
+            'status' => $row['status'],
+            'seq' => (int) $row['seq'],
+            'startedAt' => gmdate('c', (int) strtotime($row['started_at'] . ' UTC')),
+            'updatedAt' => gmdate('c', (int) strtotime($row['updated_at'] . ' UTC')),
+        ] + $state;
     }
 
     /**
@@ -62,15 +172,21 @@ final class MatchRepository
             'play_seconds' => $match['playSeconds'],
             'started_at' => gmdate('Y-m-d H:i:s', $match['startedAt']),
             'finished_at' => $match['finishedAt'] === null ? null : gmdate('Y-m-d H:i:s', $match['finishedAt']),
-            'log' => json_encode($log, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR),
+            'log' => self::json($log),
         ];
 
         return $this->db->transaction(function (Database $db) use ($userId, $clientId, $row): string {
-            $existing = $db->fetch('SELECT id, public_id FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE', [
+            $existing = $db->fetch('SELECT id, public_id, log FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE', [
                 'user' => $userId,
                 'client' => $clientId,
             ]);
             if ($existing !== null) {
+                $previous = json_decode((string) $existing['log'], true);
+                if (is_array($previous) && is_array($previous['board'] ?? null)) {
+                    $decoded = json_decode($row['log'], true, 512, JSON_THROW_ON_ERROR);
+                    $decoded['board'] = $previous['board'];
+                    $row['log'] = self::json($decoded);
+                }
                 $db->update('matches', $row, 'id = :id', ['id' => (int) $existing['id']]);
 
                 return (string) $existing['public_id'];
@@ -109,14 +225,19 @@ final class MatchRepository
         if ($row === null) {
             return null;
         }
-        $row['log'] = json_decode((string) $row['log'], true);
+        $log = json_decode((string) $row['log'], true);
+        if (!is_array($log) || !array_key_exists('version', $log)) {
+            return null;
+        }
+        unset($log['board']);
+        $row['log'] = $log;
         unset($row['id'], $row['user_id']);
 
         return $row;
     }
 
     /**
-     * Všechny zápasy účtu od nejnovějšího, s dekódovaným logem.
+     * Dohrané zápasy účtu od nejnovějšího, s dekódovaným logem. Rozehraný zápas tu není.
      *
      * @return list<array<string, mixed>>
      */
@@ -124,8 +245,11 @@ final class MatchRepository
     {
         $this->deleteAbandoned($userId);
         $rows = $this->db->fetchAll(
-            'SELECT public_id, status, mode, title, is_solo, result, average, play_seconds, started_at, finished_at, log
-             FROM matches WHERE user_id = :user ORDER BY started_at DESC, id DESC',
+            'SELECT public_id, status, mode, title, is_solo, result, average, play_seconds, started_at, finished_at,
+                    JSON_REMOVE(log, \'$.board\') AS log
+             FROM matches
+             WHERE user_id = :user AND status = \'finished\' AND JSON_EXTRACT(log, \'$.version\') IS NOT NULL
+             ORDER BY started_at DESC, id DESC',
             ['user' => $userId]
         );
         foreach ($rows as &$row) {
@@ -162,10 +286,59 @@ final class MatchRepository
         ])->rowCount() > 0;
     }
 
-    /** @return list<string> */
+    /**
+     * Id dohraných zápasů. Rozehraný zápas tu není, aby ho aplikace po konci ještě poslala celý.
+     *
+     * @return list<string>
+     */
     public function clientIds(int $userId): array
     {
-        return array_column($this->db->fetchAll('SELECT client_id FROM matches WHERE user_id = :user ORDER BY started_at', ['user' => $userId]), 'client_id');
+        return array_column($this->db->fetchAll(
+            'SELECT client_id FROM matches
+             WHERE user_id = :user AND JSON_EXTRACT(log, \'$.version\') IS NOT NULL
+             ORDER BY started_at',
+            ['user' => $userId]
+        ), 'client_id');
+    }
+
+    /** @param array<string, mixed> $value */
+    private static function json(array $value): string
+    {
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param array<string, mixed> $state
+     * @return array<string, mixed>
+     */
+    private function liveColumns(string $status, int $seq, array $state, string $now, ?string $startedAt): array
+    {
+        $players = array_values(array_filter(
+            is_array($state['players'] ?? null) ? $state['players'] : [],
+            'is_array'
+        ));
+        $title = trim((string) ($state['title'] ?? ''));
+        $columns = [
+            'status' => $status,
+            'seq' => $seq,
+            'mode' => (string) ($state['mode'] ?? 'x01'),
+            'title' => mb_substr($title !== '' ? $title : (string) ($state['mode'] ?? 'Zápas'), 0, 160),
+            'player_count' => max(1, count($players)),
+            'has_bot' => (int) in_array(true, array_column($players, 'bot'), true),
+            'is_solo' => (int) (count($players) < 2),
+            'result' => 'none',
+            'average' => null,
+            'darts_thrown' => array_sum(array_map(static fn (array $player): int => (int) ($player['darts'] ?? 0), $players)),
+            'play_seconds' => (int) ($state['played'] ?? 0),
+            'finished_at' => $status === 'live' ? null : $now,
+            'updated_at' => $now,
+            'log' => self::json(['board' => $state]),
+        ];
+        if ($startedAt !== null) {
+            $columns['started_at'] = $startedAt;
+        }
+
+        return $columns;
     }
 
     private static function newPublicId(): string

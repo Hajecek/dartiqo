@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Api;
 
 use App\Core\Request;
-use App\Repositories\LiveMatchRepository;
+use App\Repositories\MatchRepository;
 use App\Services\LiveMatchPayload;
 use InvalidArgumentException;
 
@@ -29,7 +29,7 @@ final class LiveMatchController extends ApiController
             $this->json(['ok' => false, 'message' => $e->getMessage()], 422);
         }
 
-        (new LiveMatchRepository(db()))->save(
+        (new MatchRepository(db()))->saveLive(
             (int) $user['id'],
             $clientId,
             $match['status'],

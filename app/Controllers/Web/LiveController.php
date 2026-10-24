@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Web;
 
 use App\Core\Request;
-use App\Repositories\LiveMatchRepository;
+use App\Repositories\MatchRepository;
 
 final class LiveController
 {
@@ -43,7 +43,7 @@ final class LiveController
         header('Content-Encoding: none');
         header('X-Accel-Buffering: no');
 
-        $matches = new LiveMatchRepository(db());
+        $matches = new MatchRepository(db());
         $lastKey = $request->header('Last-Event-ID');
         $deadline = time() + self::STREAM_SECONDS;
         $lastWrite = time();
@@ -53,7 +53,7 @@ final class LiveController
         flush();
 
         while (time() < $deadline && !connection_aborted()) {
-            $match = $matches->current((int) $user['id']);
+            $match = $matches->currentLive((int) $user['id']);
             $key = $match === null ? 'none' : $match['id'] . ':' . $match['seq'] . ':' . $match['status'];
             if ($key !== $lastKey) {
                 echo 'id: ' . $key . "\n";
@@ -85,7 +85,7 @@ final class LiveController
             echo '{"match":null}';
             exit;
         }
-        $match = (new LiveMatchRepository(db()))->current((int) $user['id']);
+        $match = (new MatchRepository(db()))->currentLive((int) $user['id']);
         header('Content-Type: application/json; charset=utf-8');
         header('Cache-Control: no-store');
         echo json_encode(['match' => $match], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);

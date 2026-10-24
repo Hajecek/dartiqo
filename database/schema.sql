@@ -85,28 +85,8 @@ CREATE TABLE IF NOT EXISTS fcm_tokens (
     CONSTRAINT fcm_tokens_api_token_fk FOREIGN KEY (api_token_id) REFERENCES api_tokens (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Rozehraný zápas z mobilu, který web ukazuje živě
-CREATE TABLE IF NOT EXISTS live_matches (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    user_id BIGINT UNSIGNED NOT NULL,
-    -- UUID zápasu z aplikace
-    client_id CHAR(36) NOT NULL,
-    status ENUM('live', 'finished', 'abandoned') NOT NULL DEFAULT 'live',
-    -- Pořadí aktualizace z aplikace; starší požadavek nepřepíše novější stav
-    seq INT UNSIGNED NOT NULL DEFAULT 0,
-    state MEDIUMTEXT NOT NULL,
-    started_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL,
-    finished_at DATETIME NULL,
-
-    PRIMARY KEY (id),
-    UNIQUE KEY live_matches_client_unique (user_id, client_id),
-    KEY live_matches_recent_index (user_id, updated_at),
-    CONSTRAINT live_matches_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Odehraný zápas z mobilní aplikace. Jeden řádek = jeden zápas jednoho účtu.
--- Sloupce slouží k výpisům a filtrům, celý průběh je v JSON sloupci log.
+-- Zápas z mobilní aplikace, včetně právě hraného. Jeden řádek = jeden zápas jednoho účtu.
+-- status live web ukazuje živě. Sloupce slouží k výpisům, průběh a živý snímek jsou v log.
 CREATE TABLE IF NOT EXISTS matches (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     -- Náhodné veřejné id do odkazů (96 bitů); interní id se ven neukazuje
@@ -115,7 +95,9 @@ CREATE TABLE IF NOT EXISTS matches (
     user_id BIGINT UNSIGNED NOT NULL,
     -- UUID zápasu z aplikace; opakované nahrání zápas jen přepíše
     client_id CHAR(36) NOT NULL,
-    status ENUM('finished', 'abandoned') NOT NULL,
+    status ENUM('live', 'finished', 'abandoned') NOT NULL,
+    -- Pořadí živé aktualizace z aplikace; starší požadavek nepřepíše novější snímek
+    seq INT UNSIGNED NOT NULL DEFAULT 0,
     mode ENUM('x01', 'cricket', 'aroundClock', 'countUp') NOT NULL,
     title VARCHAR(160) NOT NULL,
     player_count TINYINT UNSIGNED NOT NULL,
@@ -130,7 +112,7 @@ CREATE TABLE IF NOT EXISTS matches (
     play_seconds INT UNSIGNED NOT NULL DEFAULT 0,
     started_at DATETIME NOT NULL,
     finished_at DATETIME NULL,
-    -- Celý zápas: pravidla, hráči se statistikami, legy, sety a každá návštěva šipku po šipce
+    -- Živý snímek je v board. Po dohrání je tu i celý průběh: pravidla, hráči, legy a návštěvy
     log JSON NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -139,6 +121,7 @@ CREATE TABLE IF NOT EXISTS matches (
     UNIQUE KEY matches_public_unique (public_id),
     UNIQUE KEY matches_client_unique (user_id, client_id),
     KEY matches_user_recent_index (user_id, status, started_at),
+    KEY matches_live_index (user_id, status, updated_at),
     CONSTRAINT matches_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
