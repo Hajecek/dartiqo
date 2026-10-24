@@ -26,7 +26,10 @@ $badges = [
 <p class="eyebrow">Účet</p>
 <h1 class="mt-2">Profil</h1>
 </div>
+<div class="flex flex-wrap gap-2">
+<a class="pill" href="<?= e(url('/app/friends' . (($incomingFriends ?? 0) > 0 ? '?folder=requests' : ''))) ?>"><?= dartiqo_i('users') ?>Kamarádi<?php if (($incomingFriends ?? 0) > 0): ?><b><?= (int) $incomingFriends ?></b><?php endif; ?></a>
 <a class="pill" href="<?= e(url('/app/settings')) ?>"><?= dartiqo_i('gear') ?>Nastavení</a>
+</div>
 </header>
 
 <section class="panel p-0!">

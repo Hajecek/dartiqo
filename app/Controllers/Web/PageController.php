@@ -6,6 +6,7 @@ namespace App\Controllers\Web;
 
 use App\Core\Request;
 use App\Core\View;
+use App\Repositories\FriendRepository;
 use App\Repositories\MatchRepository;
 use App\Services\MatchInsights;
 
@@ -91,7 +92,10 @@ final class PageController
     /** @param array<string, string> $params */
     public function dashboard(Request $request, array $params = []): void
     {
-        $this->page('public.dashboard', 'Přehled | Dartiqo', 'app-body', 'layouts.app', ['insights' => $this->insights()]);
+        $this->page('public.dashboard', 'Přehled | Dartiqo', 'app-body', 'layouts.app', [
+            'insights' => $this->insights(),
+            'incomingFriends' => $this->incomingFriendCount(),
+        ]);
     }
 
     /** @param array<string, string> $params */
@@ -128,7 +132,10 @@ final class PageController
     /** @param array<string, string> $params */
     public function profile(Request $request, array $params = []): void
     {
-        $this->page('public.profile', 'Profil | Dartiqo', 'app-body', 'layouts.app', ['insights' => $this->insights()]);
+        $this->page('public.profile', 'Profil | Dartiqo', 'app-body', 'layouts.app', [
+            'insights' => $this->insights(),
+            'incomingFriends' => $this->incomingFriendCount(),
+        ]);
     }
 
     /** @param array<string, string> $params */
@@ -159,6 +166,16 @@ final class PageController
     public function resetPassword(Request $request, array $params = []): void
     {
         $this->page('auth.reset-password', 'Objev svou hru | Dartiqo', '', 'layouts.auth');
+    }
+
+    private function incomingFriendCount(): int
+    {
+        $user = auth()->user();
+        if ($user === null) {
+            return 0;
+        }
+
+        return count((new FriendRepository(db()))->book((int) $user['id'])['incoming']);
     }
 
     /** Zápasy přihlášeného hráče. Jiný účet k nim přístup nemá. */

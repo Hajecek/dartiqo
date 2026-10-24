@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Api;
 
 use App\Core\Request;
+use App\Repositories\FriendRepository;
 use App\Repositories\UserRepository;
 
 final class PeopleController extends ApiController
@@ -17,7 +18,12 @@ final class PeopleController extends ApiController
     public function index(Request $request, array $params = []): void
     {
         $user = $this->requireUser($request);
-        $people = (new UserRepository(db()))->searchDirectory($request->input('q'), (int) $user['id']);
+        $userId = (int) $user['id'];
+        $people = (new UserRepository(db()))->searchDirectory($request->input('q'), $userId);
+        $relations = (new FriendRepository(db()))->relations($userId, array_column($people, 'id'));
+        foreach ($people as $index => $person) {
+            $people[$index]['relation'] = $relations[(int) $person['id']] ?? 'none';
+        }
         $this->json(['ok' => true, 'people' => $people]);
     }
 }

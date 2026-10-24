@@ -112,3 +112,22 @@ CREATE TABLE IF NOT EXISTS matches (
     KEY matches_user_recent_index (user_id, status, started_at),
     CONSTRAINT matches_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Žádost o přátelství. Dvojice účtů je v tabulce jen jednou, user_low má menší id.
+CREATE TABLE IF NOT EXISTS friendships (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_low BIGINT UNSIGNED NOT NULL,
+    user_high BIGINT UNSIGNED NOT NULL,
+    requester_id BIGINT UNSIGNED NOT NULL,
+    status ENUM('pending', 'accepted', 'declined') NOT NULL DEFAULT 'pending',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY friendships_pair_unique (user_low, user_high),
+    KEY friendships_low_index (user_low, status),
+    KEY friendships_high_index (user_high, status),
+    CONSTRAINT friendships_low_fk FOREIGN KEY (user_low) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT friendships_high_fk FOREIGN KEY (user_high) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT friendships_requester_fk FOREIGN KEY (requester_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

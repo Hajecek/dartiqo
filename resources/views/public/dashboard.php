@@ -49,6 +49,17 @@ $subtitle = match (true) {
 </div>
 </header>
 
+<?php if (($incomingFriends ?? 0) > 0): ?>
+<a class="panel panel-link mb-4 flex items-center gap-4 p-4!" href="<?= e(url('/app/friends?folder=requests')) ?>">
+<span class="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent text-black"><?= dartiqo_i('users', 'size-5') ?></span>
+<span class="min-w-0 flex-1">
+<strong class="block text-sm">Máš <?= (int) $incomingFriends === 1 ? 'novou žádost o přátelství' : ((int) $incomingFriends < 5 ? (int) $incomingFriends . ' žádosti o přátelství' : (int) $incomingFriends . ' žádostí o přátelství') ?></strong>
+<span class="mt-0.5 block text-xs text-zinc-400">Otevři žádosti a potvrď je, nebo je odmítni.</span>
+</span>
+<?= dartiqo_i('arrow', 'size-4 shrink-0 text-zinc-500') ?>
+</a>
+<?php endif; ?>
+
 <div id="live-hero" class="mb-4" data-href="<?= e(url('/app/live')) ?>" data-reload-on-finish hidden></div>
 
 <div class="grid gap-4 @4xl/dash:grid-cols-12">

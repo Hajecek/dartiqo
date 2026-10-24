@@ -5,6 +5,7 @@ $tabs = [
     ['stats', 'Statistiky', '/app/statistics', 'M4 19V9 M10 19V5 M16 19v-6 M22 19V8'],
     ['games', 'Moje hry', '/app/games', 'M8 6h12M8 12h12M8 18h8M4 6h.01M4 12h.01M4 18h.01'],
     ['career', 'Kariéra', '/app/career', 'M8 4h8v5a4 4 0 0 1-8 0V4Z M8 6H5a3 3 0 0 0 3 4 M16 6h3a3 3 0 0 1-3 4 M12 13v4 M8 20h8'],
+    ['friends', 'Kamarádi', '/app/friends', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75'],
     ['profile', 'Profil', '/app/profile', 'M12 12a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2Z M5.5 20.2a6.5 6.5 0 0 1 13 0'],
 ];
 $icon = static function (string $d): string {
@@ -16,6 +17,7 @@ $activeFor = static function (string $id) use ($path): bool {
         'stats' => $path === '/app/statistics',
         'games' => $path === '/app/games' || str_starts_with($path, '/app/games/'),
         'career' => $path === '/app/career',
+        'friends' => $path === '/app/friends',
         'home' => $path === '/app',
         default => false,
     };
@@ -45,7 +47,7 @@ $activeFor = static function (string $id) use ($path): bool {
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6 9 12l6 6"/></svg>
 </button>
 </aside>
-<nav class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-white/10 bg-zinc-950/95 px-1 py-1 backdrop-blur-xl lg:hidden [&_a]:flex [&_a]:flex-col [&_a]:items-center [&_a]:gap-1 [&_a]:py-1 [&_a]:text-[10px] [&_a]:text-zinc-500 [&_a.active]:text-accent [&_svg]:size-5" aria-label="Hlavní sekce">
+<nav class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-white/10 bg-zinc-950/95 px-1 py-1 backdrop-blur-xl lg:hidden [&_a]:flex [&_a]:flex-col [&_a]:items-center [&_a]:gap-1 [&_a]:py-1 [&_a]:text-[10px] [&_a]:text-zinc-500 [&_a.active]:text-accent [&_svg]:size-5" aria-label="Hlavní sekce">
 <?php foreach ($tabs as [$id, $label, $href, $d]): ?>
 <a class="<?= $activeFor($id) ? 'active' : '' ?>" data-tab="<?= e($id) ?>" href="<?= e(url($href)) ?>"><?= $icon($d) ?><span><?= e($label) ?></span></a>
 <?php endforeach; ?>
