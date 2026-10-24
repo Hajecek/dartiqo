@@ -15,6 +15,7 @@
 </div>
 </div>
 <div id="live-banner" class="fixed inset-x-4 top-4 z-[90] sm:inset-x-auto sm:right-6 sm:w-[420px] lg:top-auto lg:right-8 lg:bottom-8" data-stream="<?= e(url('/app/live/stream')) ?>" aria-live="polite" hidden></div>
+<div id="profile-sync" hidden data-stream="<?= e(url('/app/profile/stream')) ?>"></div>
 <div id="toast" class="pointer-events-none fixed bottom-24 left-1/2 z-[100] max-w-[90vw] -translate-x-1/2 translate-y-[15px] rounded-2xl bg-accent px-5 py-3.5 text-xs font-medium text-zinc-900 opacity-0 shadow-[0_18px_40px_-12px_#faff0066] transition-all lg:bottom-8 [&.toast-visible]:translate-y-0 [&.toast-visible]:opacity-100" role="status" aria-live="polite"></div>
 <script src="<?= e(asset('js/board.js')) ?>"></script>
 <script src="<?= e(asset('js/app.js')) ?>"></script>

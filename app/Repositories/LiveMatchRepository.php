@@ -11,7 +11,7 @@ final class LiveMatchRepository
     /** Rozehraný zápas bez aktualizace déle než tohle už web neukazuje (zavřená aplikace). */
     private const STALE_MINUTES = 45;
     /** Jak dlouho po konci zůstane vidět výsledek. */
-    private const FINISHED_MINUTES = 5;
+    private const FINISHED_SECONDS = 90;
 
     public function __construct(private readonly Database $db)
     {
@@ -51,7 +51,7 @@ final class LiveMatchRepository
             'SELECT * FROM live_matches
              WHERE user_id = :user_id AND (
                 (status = \'live\' AND updated_at > UTC_TIMESTAMP() - INTERVAL ' . self::STALE_MINUTES . ' MINUTE)
-                OR (status = \'finished\' AND finished_at > UTC_TIMESTAMP() - INTERVAL ' . self::FINISHED_MINUTES . ' MINUTE)
+                OR (status = \'finished\' AND finished_at > UTC_TIMESTAMP() - INTERVAL ' . self::FINISHED_SECONDS . ' SECOND)
              )
              ORDER BY updated_at DESC
              LIMIT 1',

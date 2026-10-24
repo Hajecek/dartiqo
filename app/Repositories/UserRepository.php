@@ -31,9 +31,19 @@ final class UserRepository
         return $this->db->fetch('SELECT 1 FROM users WHERE username = ?', [$username]) !== null;
     }
 
+    public function usernameTaken(string $username, int $exceptId): bool
+    {
+        return $this->db->fetch('SELECT 1 FROM users WHERE username = ? AND id != ?', [$username, $exceptId]) !== null;
+    }
+
     public function emailExists(string $email): bool
     {
         return $this->db->fetch('SELECT 1 FROM users WHERE email = ?', [$email]) !== null;
+    }
+
+    public function emailTaken(string $email, int $exceptId): bool
+    {
+        return $this->db->fetch('SELECT 1 FROM users WHERE email = ? AND id != ?', [$email, $exceptId]) !== null;
     }
 
     /** @param array{username:string,email:string,password:string,first_name:string,last_name:string,avatar_path?:?string} $data */
@@ -57,6 +67,31 @@ final class UserRepository
     public function updateAvatar(int $id, ?string $path): void
     {
         $this->db->update('users', ['avatar_path' => $path], 'id = :id', ['id' => $id]);
+    }
+
+    /**
+     * @param array{first_name:string,last_name:string,username:string,email:string,avatar_path:?string} $data
+     */
+    public function updateProfile(int $id, array $data): void
+    {
+        $this->db->query(
+            'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, avatar_path = ?, profile_revision = profile_revision + 1, updated_at = UTC_TIMESTAMP() WHERE id = ?',
+            [
+                $data['first_name'],
+                $data['last_name'],
+                $data['username'],
+                $data['email'],
+                $data['avatar_path'],
+                $id,
+            ]
+        );
+    }
+
+    public function profileRevision(int $id): int
+    {
+        $row = $this->db->fetch('SELECT profile_revision FROM users WHERE id = ?', [$id]);
+
+        return (int) ($row['profile_revision'] ?? 1);
     }
 
     public function setRememberToken(int $id, ?string $hash): void
@@ -83,13 +118,16 @@ final class UserRepository
             $plan = 'free';
         }
 
+        $revision = (int) ($user['profile_revision'] ?? 1);
+
         return [
             'id' => (int) $user['id'],
             'username' => $user['username'],
             'email' => $user['email'],
             'first' => $user['first_name'],
             'last' => $user['last_name'],
-            'photo' => $user['avatar_path'] ? '/' . $user['avatar_path'] : null,
+            'photo' => $user['avatar_path'] ? '/' . $user['avatar_path'] . '?v=' . $revision : null,
+            'profileRevision' => $revision,
             'plan' => $plan,
             'planExpiresAt' => $expires,
             'role' => $user['role'],

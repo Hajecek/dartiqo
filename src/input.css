@@ -255,6 +255,19 @@
   .switch:checked::before {
     @apply translate-x-5 bg-black;
   }
+  .match-stage {
+    --color-white: #fff;
+    color-scheme: dark;
+    background: #0e1a14;
+    color: #fff;
+    font-family: ui-rounded, "SF Pro Rounded", "SF Pro Display", system-ui, -apple-system, sans-serif;
+  }
+  .match-glass {
+    background: rgb(255 255 255 / 0.07);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+    backdrop-filter: blur(20px) saturate(1.4);
+  }
 }
 
 @keyframes float {

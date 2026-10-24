@@ -3,10 +3,13 @@
 declare(strict_types=1);
 
 use App\Controllers\Api\AuthController as ApiAuthController;
+use App\Controllers\Api\MatchController;
 use App\Controllers\Api\LiveMatchController;
 use App\Controllers\Web\AuthController;
+use App\Controllers\Web\GameController;
 use App\Controllers\Web\LiveController;
 use App\Controllers\Web\PageController;
+use App\Controllers\Web\ProfileController;
 
 $router = app()->router();
 
@@ -27,11 +30,14 @@ $router->get('/tournaments', [PageController::class, 'tournaments']);
 $router->get('/app', [PageController::class, 'dashboard']);
 $router->get('/app/statistics', [PageController::class, 'appStatistics']);
 $router->get('/app/games/{id}', [PageController::class, 'appGames']);
+$router->post('/app/games/{id}/delete', [GameController::class, 'destroy']);
 $router->get('/app/games', [PageController::class, 'appGames']);
 $router->get('/app/career', [PageController::class, 'appCareer']);
 $router->get('/app/live', [PageController::class, 'live']);
 $router->get('/app/live/stream', [LiveController::class, 'stream']);
 $router->get('/app/profile', [PageController::class, 'profile']);
+$router->post('/app/profile', [ProfileController::class, 'update']);
+$router->get('/app/profile/stream', [ProfileController::class, 'stream']);
 $router->get('/app/settings', [PageController::class, 'settings']);
 $router->get('/login', [PageController::class, 'login']);
 $router->get('/prihlaseni', [PageController::class, 'login']);
@@ -49,4 +55,9 @@ $router->post('/api/v1/auth/login', [ApiAuthController::class, 'login']);
 $router->post('/api/v1/auth/logout', [ApiAuthController::class, 'logout']);
 $router->post('/api/v1/auth/social/{provider}', [ApiAuthController::class, 'social']);
 $router->get('/api/v1/me', [ApiAuthController::class, 'me']);
+$router->post('/api/v1/me', [ApiAuthController::class, 'update']);
+$router->get('/api/v1/me/stream', [ApiAuthController::class, 'stream']);
 $router->post('/api/v1/live-matches/{id}', [LiveMatchController::class, 'update']);
+$router->get('/api/v1/matches', [MatchController::class, 'index']);
+$router->post('/api/v1/matches/{id}', [MatchController::class, 'store']);
+$router->post('/api/v1/matches/{id}/delete', [MatchController::class, 'destroy']);

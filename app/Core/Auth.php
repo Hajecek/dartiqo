@@ -57,6 +57,16 @@ final class Auth
         return $this->user() !== null;
     }
 
+    /** Načte znovu řádek z DB (po úpravě profilu). */
+    public function refreshUser(): void
+    {
+        $current = $this->user();
+        if ($current === null) {
+            return;
+        }
+        $this->user = $this->users->findById((int) $current['id']);
+    }
+
     /** @return array<string, mixed>|null */
     public function attempt(string $identity, string $password, bool $remember): ?array
     {

@@ -2,19 +2,20 @@
 require __DIR__ . '/../partials/player-games.php';
 require_once __DIR__ . '/../partials/ui.php';
 
-// Odehrané zápasy se zatím nesynchronizují z aplikace
-echo dartiqo_empty_page('Historie', 'Moje hry', 'Zatím žádné hry', 'Dohrané zápasy a tréninky z aplikace se tu objeví, až se začnou synchronizovat. Rozehraný zápas už teď sleduješ živě v Přehledu.', 'clock');
-return;
-
+/** @var \App\Services\MatchInsights $insights */
 $matchId = (string) ($matchId ?? '');
-$games = dartiqo_games();
-$game = $matchId !== '' ? dartiqo_game($matchId) : null;
+if ($matchId === '' && $insights->isEmpty()) {
+    echo dartiqo_empty_page('Historie', 'Moje hry', 'Zatím žádné hry', 'Dohraj zápas v aplikaci Dartiqo a objeví se tady i se všemi legy a hody.', 'clock');
+    return;
+}
+$games = $insights->cards();
+$game = $matchId !== '' ? $insights->detail($matchId) : null;
 $filters = [
     ['all', 'Vše', ''],
     ['win', 'Výhry', 'bg-emerald-400'],
     ['draw', 'Remízy', 'bg-amber-300'],
     ['loss', 'Prohry', 'bg-rose-400'],
-    ['train', 'Trénink', 'bg-accent'],
+    ['train', 'Sólo', 'bg-accent'],
 ];
 ?>
 <main class="@container/dash mx-auto w-full max-w-7xl">
@@ -23,7 +24,7 @@ $filters = [
 <span class="mx-auto grid size-14 place-items-center rounded-2xl bg-white/[.05] text-zinc-400 ring-1 ring-white/10 ring-inset"><?= dartiqo_i('search', 'size-6') ?></span>
 <p class="eyebrow mt-6">Moje hry</p>
 <h1 class="mt-2">Zápas nenalezen</h1>
-<p class="mt-2 text-sm text-zinc-400">Tenhle odkaz nevede na žádnou ukázkovou hru.</p>
+<p class="mt-2 text-sm text-zinc-400">Zápas neexistuje, nebo patří jinému účtu.</p>
 <a class="btn-ghost mt-6" href="<?= e(url('/app/games')) ?>"><?= dartiqo_i('back') ?>Zpět na hry</a>
 </div>
 <?php elseif ($game !== null): ?>
@@ -33,8 +34,9 @@ $versus = preg_match('/^(\S+)\s+:\s+(\S+)$/u', (string) $game['score'], $scorePa
 $youScore = $versus ? $scoreParts[1] : (string) $game['score'];
 $oppScore = $versus ? $scoreParts[2] : '';
 $oppScoreClass = $game['result'] === 'draw' ? $style['text'] : ($game['result'] === 'loss' ? 'text-emerald-300' : 'text-zinc-400');
-$youName = 'Alex Novák';
-$isTrain = $game['kind'] === 'train';
+$me = auth()->user() ?? [];
+$youName = trim(($me['first_name'] ?? '') . ' ' . ($me['last_name'] ?? '')) ?: 'Ty';
+$isTrain = false;
 $youCaption = $isTrain ? 'Dril' : 'Ty';
 $youTitle = $isTrain ? (string) $game['title'] : $youName;
 $oppCaption = $isTrain ? 'Výsledek' : 'Soupeř';
@@ -63,18 +65,14 @@ $viz = [
     'bands' => $game['bands'],
     'unit' => $game['unit'],
 ];
-$verdict = match ($game['result']) {
-    'win' => 'Výhra',
-    'loss' => 'Prohra',
-    'draw' => 'Remíza',
-    default => 'Splněno',
-};
+$verdict = (string) $game['label'];
 ?>
 <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
 <a class="pill" href="<?= e(url('/app/games')) ?>"><?= dartiqo_i('back') ?>Všechny hry</a>
 <div class="flex flex-wrap items-center gap-2">
 <span class="<?= e(dartiqo_game_tone((string) $game['tone'])) ?>"><?= e($game['mode']) ?></span>
 <span class="chip <?= e($style['soft']) ?>"><?= e($verdict) ?></span>
+<button class="icon-btn size-9 text-rose-400 hover:bg-rose-400/10 hover:text-rose-300" type="button" data-sheet="sheet-delete-match" aria-label="Smazat zápas" title="Smazat zápas"><?= dartiqo_i('trash', 'size-4') ?></button>
 </div>
 </div>
 
@@ -253,9 +251,18 @@ $verdict = match ($game['result']) {
 <div class="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-flow-col sm:grid-cols-2 sm:grid-rows-3" id="map-fields"></div>
 </article>
 </div>
-<p class="mt-6 text-xs text-zinc-600">Ukázkový detail zápasu. Čísla, heatmapa i soupeř jsou modelové.</p>
 <script src="<?= e(asset('js/vendor/chart.umd.min.js')) ?>"></script>
 <script type="application/json" id="match-data"><?= json_encode($viz, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+<dialog class="m-auto w-[min(420px,calc(100%-2rem))] rounded-[28px] border border-white/10 bg-zinc-950 p-6 text-left text-zinc-100 shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm open:animate-reveal" id="sheet-delete-match">
+<span class="grid size-12 place-items-center rounded-2xl bg-rose-400/10 text-rose-300 ring-1 ring-rose-400/25 ring-inset"><?= dartiqo_i('trash', 'size-5') ?></span>
+<h2 class="mt-4">Smazat zápas?</h2>
+<p class="mt-2 text-sm text-zinc-400">Zápas zmizí z webu i ze statistik a smaže se i v aplikaci. Nejde to vrátit.</p>
+<p class="mt-3 hidden text-sm text-rose-300" data-delete-error></p>
+<div class="mt-6 flex justify-end gap-2">
+<button class="pill" type="button" data-sheet-close>Zrušit</button>
+<button class="pill bg-rose-500! text-white! hover:bg-rose-400!" type="button" data-delete-match="<?= e('/app/games/' . $game['id'] . '/delete') ?>">Smazat</button>
+</div>
+</dialog>
 <?php else: ?>
 <?php
 $tally = ['win' => 0, 'loss' => 0, 'draw' => 0, 'train' => 0];
@@ -309,7 +316,6 @@ $ring = 2 * M_PI * 42;
 <p class="mt-4 text-sm text-zinc-400">Tomuto filtru neodpovídá žádná hra.</p>
 </div>
 </div>
-<p class="mt-2 text-xs text-zinc-600">Náhled archivu. Soupeři i výsledky jsou ukázkové.</p>
 </div>
 
 <aside class="flex w-full flex-col gap-4 @4xl/dash:sticky @4xl/dash:top-8">
@@ -344,7 +350,7 @@ $ring = 2 * M_PI * 42;
 <?php endforeach; ?>
 </div>
 <?php if ($tally['train'] > 0): ?>
-<p class="relative mt-4 flex items-center gap-2 text-xs text-zinc-400"><span class="size-1.5 rounded-full bg-accent"></span>Trénink <b class="text-accent"><?= e((string) $tally['train']) ?></b> · mimo zápasy</p>
+<p class="relative mt-4 flex items-center gap-2 text-xs text-zinc-400"><span class="size-1.5 rounded-full bg-accent"></span>Sólo <b class="text-accent"><?= e((string) $tally['train']) ?></b> · mimo bilanci</p>
 <?php endif; ?>
 </section>
 <section class="panel" aria-labelledby="form-title">

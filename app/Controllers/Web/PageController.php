@@ -6,6 +6,8 @@ namespace App\Controllers\Web;
 
 use App\Core\Request;
 use App\Core\View;
+use App\Repositories\MatchRepository;
+use App\Services\MatchInsights;
 
 final class PageController
 {
@@ -89,25 +91,25 @@ final class PageController
     /** @param array<string, string> $params */
     public function dashboard(Request $request, array $params = []): void
     {
-        $this->page('public.dashboard', 'Přehled | Dartiqo', 'app-body', 'layouts.app');
+        $this->page('public.dashboard', 'Přehled | Dartiqo', 'app-body', 'layouts.app', ['insights' => $this->insights()]);
     }
 
     /** @param array<string, string> $params */
     public function appStatistics(Request $request, array $params = []): void
     {
-        $this->page('public.app-statistics', 'Statistiky | Dartiqo', 'app-body', 'layouts.app');
+        $this->page('public.app-statistics', 'Statistiky | Dartiqo', 'app-body', 'layouts.app', ['insights' => $this->insights()]);
     }
 
     /** @param array<string, string> $params */
     public function appGames(Request $request, array $params = []): void
     {
-        $id = (string) ($params['id'] ?? '');
+        $id = strtolower((string) ($params['id'] ?? ''));
         $this->page(
             'public.app-games',
             $id !== '' ? 'Detail zápasu | Dartiqo' : 'Moje hry | Dartiqo',
             'app-body',
             'layouts.app',
-            ['matchId' => $id]
+            ['matchId' => $id, 'insights' => $this->insights()]
         );
     }
 
@@ -120,13 +122,13 @@ final class PageController
     /** @param array<string, string> $params */
     public function live(Request $request, array $params = []): void
     {
-        $this->page('public.live', 'Živě | Dartiqo', 'app-body', 'layouts.app');
+        $this->page('public.live', 'Živě | Dartiqo', 'app-body', 'layouts.live');
     }
 
     /** @param array<string, string> $params */
     public function profile(Request $request, array $params = []): void
     {
-        $this->page('public.profile', 'Profil | Dartiqo', 'app-body', 'layouts.app');
+        $this->page('public.profile', 'Profil | Dartiqo', 'app-body', 'layouts.app', ['insights' => $this->insights()]);
     }
 
     /** @param array<string, string> $params */
@@ -159,10 +161,18 @@ final class PageController
         $this->page('auth.reset-password', 'Objev svou hru | Dartiqo', '', 'layouts.auth');
     }
 
+    /** Zápasy přihlášeného hráče. Jiný účet k nim přístup nemá. */
+    private function insights(): MatchInsights
+    {
+        $user = auth()->user();
+
+        return new MatchInsights($user === null ? [] : (new MatchRepository(db()))->allForUser((int) $user['id']));
+    }
+
     /** @param array<string, mixed> $data */
     private function page(string $view, string $title, string $bodyClass = '', string $layout = 'layouts.public', array $data = []): void
     {
-        if ($layout === 'layouts.app' && !auth()->check()) {
+        if (in_array($layout, ['layouts.app', 'layouts.live'], true) && !auth()->check()) {
             app()->redirect('/login');
         }
         if ($layout === 'layouts.auth' && auth()->check()) {

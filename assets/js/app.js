@@ -16,7 +16,10 @@ function login(){return authShell(`<span class="text-[10px] font-bold uppercase 
 let regStep=0,reg={first:'',last:'',username:'',email:'',password:'',confirm:'',avatar:'🎯',zoom:1,x:0,y:0};function register(){return authShell('<div id="register-content"></div>',true)}function avatarMarkup(){return reg.photo?`<img src="${url(reg.photo)}" alt="Náhled profilové fotky" style="transform:translate(${reg.x}px,${reg.y}px) scale(${reg.zoom})">`:`<span>${reg.avatar}</span>`}function renderRegister(){const names=['Vyber si cestu','Jak ti máme říkat?','Tvoje hráčské jméno','Kam ti můžeme napsat?','Heslo, které drží.','Ukaž svou tvář.','Je to tvoje.'];$('#register-content').innerHTML=`<span class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">${regStep?'KROK '+regStep+' / 6':'VÍTEJ V DARTIQO'}</span><h1>${names[regStep]}</h1><div class="mt-5 mb-6 flex gap-1 [&_i]:h-1 [&_i]:flex-1 [&_i]:rounded [&_i]:bg-surface-2 [&_i.done]:bg-accent">${Array.from({length:6},(_,i)=>`<i class="${i<regStep?'done':''}"></i>`).join('')}</div><form id="register-form" novalidate>${regStep===0?`${socials()}<button type="button" class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020] w-full mt-5" id="email-register">Pokračovat e-mailem ↗</button><p class="text-xs text-center mt-5">Už máš účet? <a href="${url("/login")}" class="text-accent">Přihlásit se</a></p>`:regStep===1?field('first','Jméno','text',reg.first,'required autocomplete="given-name"')+field('last','Příjmení','text',reg.last,'required autocomplete="family-name"'):regStep===2?field('username','Uživatelské jméno','text',reg.username,'required minlength="3" maxlength="24" autocomplete="username"')+'<p class="mt-2 text-[10px] text-muted">3–24 znaků: písmena, čísla a podtržítko. Dostupnost ověříme po kliknutí na Pokračovat.</p><div id="username-alts" class="flex gap-2 mt-3"></div>':regStep===3?field('email','E-mail','email',reg.email,'required autocomplete="email"'):regStep===4?passwordField('password','Heslo')+passwordField('confirm','Potvrzení hesla')+'<div class="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-2 [&_i]:block [&_i]:h-full [&_i]:bg-accent [&_i]:transition-all [&_i]:duration-300"><i id="strength-bar" style="width:0"></i></div><p id="strength-text" class="mt-2 text-[10px] text-muted">Síla hesla</p><p id="password-length" class="mt-2 text-[10px] text-muted">○ 12 až 128 znaků</p><p id="password-match" class="mt-2 text-[10px] text-muted">○ Hesla se shodují</p>':regStep===5?`<div class="relative mx-auto size-32 touch-none overflow-hidden rounded-full bg-surface-2 [&_img]:pointer-events-none [&_img]:size-full [&_img]:object-cover [&_img]:select-none [&_span]:flex [&_span]:h-full [&_span]:items-center [&_span]:justify-center [&_span]:text-5xl" id="avatar-preview">${avatarMarkup()}</div><label class="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface px-3 py-3 text-xs font-semibold text-ink hover:border-accent mt-5 cursor-pointer" id="drop-zone">Nahrát nebo přetáhnout fotku<input id="avatar-upload" type="file" accept="image/*" class="hidden"></label><label for="avatar-zoom">Přiblížení · fotku posuň tažením</label><input type="range" id="avatar-zoom" min="1" max="2.5" step=".05" value="${reg.zoom}"><div class="flex justify-center gap-3 mt-5">${['🎯','⚡','♜','★'].map(a=>`<button type="button" class="flex size-9 items-center justify-center rounded-full border border-line bg-transparent text-ink home:border-white/15 home:text-[#eee] max-md:home:size-8 controls:border-line! controls:text-ink!" data-avatar="${a}">${a}</button>`).join('')}</div><button type="button" class="text-xs text-zinc-500 block mx-auto mt-4" id="skip-avatar">Přeskočit tento krok →</button>`:`<div class="rounded-3xl border border-line bg-surface p-6 md:p-8 !p-5"><div class="relative mx-auto size-32 touch-none overflow-hidden rounded-full bg-surface-2 [&_img]:pointer-events-none [&_img]:size-full [&_img]:object-cover [&_img]:select-none [&_span]:flex [&_span]:h-full [&_span]:items-center [&_span]:justify-center [&_span]:text-5xl !w-20 !h-20">${avatarMarkup()}</div><h3 class="mt-4 text-center">${escapeHtml(reg.first)} ${escapeHtml(reg.last)}</h3><p class="text-xs text-center">@${escapeHtml(reg.username)}<br>${escapeHtml(reg.email)}</p></div><label class="flex gap-3 items-start text-[11px]"><input type="checkbox" id="terms"> Souhlasím s ukázkovými podmínkami <button type="button" class="text-accent" data-legal="Podmínky">↗</button></label><label class="flex gap-3 items-start text-[11px]"><input type="checkbox" id="privacy"> Seznámil/a jsem se se zásadami soukromí <button type="button" class="text-accent" data-legal="Soukromí">↗</button></label><label class="flex gap-3 items-start text-[11px]"><input type="checkbox"> Chci novinky od Dartiqo (nepovinné)</label>`}<p id="register-status" class="mt-2 text-[10px] text-muted min-h-5" role="status"></p>${regStep?`<div class="flex gap-3 mt-5"><button type="button" class="inline-flex items-center justify-center gap-5 rounded-full border border-line bg-transparent px-6 py-3.5 text-xs font-bold text-ink shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020]" id="reg-back">←</button><button class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020] flex-1" type="submit">${regStep===6?'Vytvořit účet':'Pokračovat'} ↗</button></div>`:''}</form><p class="mt-5 text-[10px] leading-relaxed text-muted">Účet vznikne až po potvrzení posledního kroku.</p>`;bindCommon($('#register-content'));if(regStep===0){$('#email-register').onclick=()=>{regStep=1;renderRegister()};return}$('#reg-back').onclick=()=>{saveRegFields();regStep--;renderRegister()};if(regStep===4){$('#password').value=reg.password;$('#confirm').value=reg.confirm}$('#register-form').oninput=()=>{saveRegFields();validateReg(false)};$('#register-form').onsubmit=async e=>{e.preventDefault();saveRegFields();if(!validateReg(true))return;if(regStep===2||regStep===3){const name=regStep===2?'username':'email',btn=$('#register-form button[type=submit]');btn.disabled=true;let r;try{r=await api('/register/availability?field='+name+'&value='+encodeURIComponent(reg[name]),null,'GET')}catch{r={ok:false,message:'Server je teď nedostupný. Zkus to za chvíli.'}}btn.disabled=false;if(!r.ok){regError(r.message||'Hodnotu se nepodařilo ověřit.');if(name==='username'&&r.status===200)showUsernameAlts();return}}if(regStep===6){finishRegistration();return}regStep++;renderRegister()};if(regStep===5)bindAvatar();validateReg(false)}
 function saveRegFields(){['first','last','username','email','password','confirm'].forEach(k=>{if($('#'+k))reg[k]=$('#'+k).value})}function validateReg(show){let msg='',ok=true;if(regStep===1){ok=reg.first.trim().length>0&&reg.last.trim().length>0;msg=ok?'✓ Jméno je připravené.':'Vyplň jméno a příjmení.'}if(regStep===2){ok=/^[a-zA-Z0-9_]{3,24}$/.test(reg.username);msg=ok?'✓ Formát jména je v pořádku.':'Použij 3–24 písmen, číslic nebo podtržítek.';$('#username-alts').innerHTML=''}if(regStep===3){ok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reg.email);msg=ok?'✓ Formát e-mailu je v pořádku.':'Zadej platný formát e-mailu.'}if(regStep===4){const len=reg.password.length>=12&&reg.password.length<=128,match=reg.password===reg.confirm&&reg.confirm.length>0;ok=len&&match;let strength=reg.password.length<12?0:Math.min(3,(reg.password.length>=16?1:0)+(/[^a-zA-Z0-9]/.test(reg.password)?1:0)+(/[0-9]/.test(reg.password)&&/[A-Z]/.test(reg.password)?1:0));$('#strength-bar').style.width=reg.password.length?((strength+1)*25)+'%':'0%';$('#strength-text').textContent=['Slabé','Přijatelné','Silné','Velmi silné'][strength];$('#password-length').textContent=(len?'✓':'○')+' 12 až 128 znaků';$('#password-length').className='mt-2 text-[10px] text-muted'+(len?'good':'');$('#password-match').textContent=(match?'✓':'○')+' Hesla se shodují';$('#password-match').className='mt-2 text-[10px] text-muted'+(match?'good':'');msg=ok?'✓ Heslo je připravené.':'Zkontroluj délku hesla a jeho potvrzení.'}if(regStep===6){ok=$('#terms').checked&&$('#privacy').checked;msg=ok?'✓ Vše je připravené.':'Pro pokračování potvrď oba povinné body.'}const status=$('#register-status');status.textContent=ok?msg:show?msg:'';status.className='mt-2 text-[10px] text-muted min-h-5'+(ok?'good':show?'error':'');return ok}
 function bindAvatar(){const render=()=>$('#avatar-preview').innerHTML=avatarMarkup();function load(file){if(!file)return;if(!file.type.startsWith('image/')||file.size>5*1024*1024){toast('Vyber obrázek do 5 MB.');return}const reader=new FileReader();reader.onload=()=>{reg.photo=reader.result;reg.zoom=1;reg.x=0;reg.y=0;render()};reader.readAsDataURL(file)}$('#avatar-upload').onchange=e=>load(e.target.files[0]);const drop=$('#drop-zone');drop.ondragover=e=>{e.preventDefault();drop.classList.add('border-accent')};drop.ondragleave=()=>drop.classList.remove('border-accent');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('border-accent');load(e.dataTransfer.files[0])};$('#avatar-zoom').oninput=e=>{reg.zoom=+e.target.value;const bound=64*(reg.zoom-1);reg.x=Math.max(-bound,Math.min(bound,reg.x));reg.y=Math.max(-bound,Math.min(bound,reg.y));render()};$$('[data-avatar]').forEach(b=>b.onclick=()=>{reg.photo=null;reg.avatar=b.dataset.avatar;render()});$('#skip-avatar').onclick=()=>{regStep=6;renderRegister()};let drag;const crop=$('#avatar-preview');crop.onpointerdown=e=>{if(!reg.photo)return;drag={x:e.clientX,y:e.clientY,ox:reg.x,oy:reg.y};crop.setPointerCapture(e.pointerId)};crop.onpointermove=e=>{if(!drag)return;const bound=64*(reg.zoom-1);reg.x=Math.max(-bound,Math.min(bound,drag.ox+e.clientX-drag.x));reg.y=Math.max(-bound,Math.min(bound,drag.oy+e.clientY-drag.y));render()};crop.onpointerup=()=>drag=null;crop.onpointercancel=()=>drag=null}
-function regError(msg){const s=$('#register-status');if(!s)return;s.textContent=msg;s.className='mt-2 text-[10px] text-muted min-h-5 error'}function showUsernameAlts(){$('#username-alts').innerHTML=['180','_darts','26'].map(x=>`<button class="rounded-full border border-line bg-transparent px-4 py-2 text-xs text-muted [&.active]:border-accent [&.active]:bg-accent [&.active]:text-zinc-900 controls:px-3 controls:py-[7px] controls:text-[10px]" type="button" data-alt="${escapeHtml((reg.username+x).slice(0,24))}">${escapeHtml((reg.username+x).slice(0,24))}</button>`).join('');$$('[data-alt]').forEach(b=>b.onclick=()=>{$('#username').value=b.dataset.alt;saveRegFields();validateReg(false)})}function cropPhoto(){return new Promise(resolve=>{if(!reg.photo)return resolve('');const img=new Image();img.onload=()=>{const S=256,k=S/128,c=document.createElement('canvas');c.width=c.height=S;const ctx=c.getContext('2d'),scale=Math.max(S/img.width,S/img.height)*reg.zoom;ctx.fillStyle='#fff';ctx.fillRect(0,0,S,S);ctx.drawImage(img,(S-img.width*scale)/2+reg.x*k,(S-img.height*scale)/2+reg.y*k,img.width*scale,img.height*scale);resolve(c.toDataURL('image/jpeg',.85))};img.onerror=()=>resolve('');img.src=reg.photo})}async function finishRegistration(){const btn=$('#register-form button[type=submit]');btn.disabled=true;btn.textContent='Vytváříme účet…';let r;try{r=await api('/register',{first:reg.first,last:reg.last,username:reg.username,email:reg.email,password:reg.password,confirm:reg.confirm,terms:true,photo:await cropPhoto()})}catch{r={ok:false,message:'Server je teď nedostupný. Zkus to za chvíli.'}}if(!r.ok){const steps={first:1,last:1,username:2,email:3,password:4,photo:5,terms:6},first=Object.keys(r.errors||{}).sort((a,b)=>(steps[a]||9)-(steps[b]||9))[0];if(first&&steps[first]!==regStep){regStep=steps[first];renderRegister()}else{btn.disabled=false;btn.textContent='Vytvořit účet ↗'}regError(first?r.errors[first]:(r.message||'Registrace se nepovedla.'));if(first==='username')showUsernameAlts();return}profile={...profile,...r.user};try{sessionStorage.removeItem('dartiqo-demo-profile')}catch{}reg.password=reg.confirm='';$('#register-content').innerHTML=`<div class="text-center py-10 animate-reveal"><div class="text-accent text-8xl mb-7">✓</div><span class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">ÚČET VYTVOŘEN</span><h1>Vítej ve hře,<br>${escapeHtml(profile.first)}.</h1><p class="text-xs mb-7">Tvoje kariéra může začít.</p><a class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020]" href="${url("/app")}">Vstoupit do Dartiqo ↗</a></div>`}function saveProfile(){try{sessionStorage.setItem('dartiqo-demo-profile',JSON.stringify(profile))}catch{}}
+function regError(msg){const s=$('#register-status');if(!s)return;s.textContent=msg;s.className='mt-2 text-[10px] text-muted min-h-5 error'}function showUsernameAlts(){$('#username-alts').innerHTML=['180','_darts','26'].map(x=>`<button class="rounded-full border border-line bg-transparent px-4 py-2 text-xs text-muted [&.active]:border-accent [&.active]:bg-accent [&.active]:text-zinc-900 controls:px-3 controls:py-[7px] controls:text-[10px]" type="button" data-alt="${escapeHtml((reg.username+x).slice(0,24))}">${escapeHtml((reg.username+x).slice(0,24))}</button>`).join('');$$('[data-alt]').forEach(b=>b.onclick=()=>{$('#username').value=b.dataset.alt;saveRegFields();validateReg(false)})}function cropPhoto(){return new Promise(resolve=>{if(!reg.photo)return resolve('');const img=new Image();img.onload=()=>{const S=256,k=S/128,c=document.createElement('canvas');c.width=c.height=S;const ctx=c.getContext('2d'),scale=Math.max(S/img.width,S/img.height)*reg.zoom;ctx.fillStyle='#fff';ctx.fillRect(0,0,S,S);ctx.drawImage(img,(S-img.width*scale)/2+reg.x*k,(S-img.height*scale)/2+reg.y*k,img.width*scale,img.height*scale);resolve(c.toDataURL('image/jpeg',.85))};img.onerror=()=>resolve('');img.src=reg.photo})}async function finishRegistration(){const btn=$('#register-form button[type=submit]');btn.disabled=true;btn.textContent='Vytváříme účet…';let r;try{r=await api('/register',{first:reg.first,last:reg.last,username:reg.username,email:reg.email,password:reg.password,confirm:reg.confirm,terms:true,photo:await cropPhoto()})}catch{r={ok:false,message:'Server je teď nedostupný. Zkus to za chvíli.'}}if(!r.ok){const steps={first:1,last:1,username:2,email:3,password:4,photo:5,terms:6},first=Object.keys(r.errors||{}).sort((a,b)=>(steps[a]||9)-(steps[b]||9))[0];if(first&&steps[first]!==regStep){regStep=steps[first];renderRegister()}else{btn.disabled=false;btn.textContent='Vytvořit účet ↗'}regError(first?r.errors[first]:(r.message||'Registrace se nepovedla.'));if(first==='username')showUsernameAlts();return}profile={...profile,...r.user};try{sessionStorage.removeItem('dartiqo-demo-profile')}catch{}reg.password=reg.confirm='';$('#register-content').innerHTML=`<div class="text-center py-10 animate-reveal"><div class="text-accent text-8xl mb-7">✓</div><span class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">ÚČET VYTVOŘEN</span><h1>Vítej ve hře,<br>${escapeHtml(profile.first)}.</h1><p class="text-xs mb-7">Tvoje kariéra může začít.</p><a class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020]" href="${url("/app")}">Vstoupit do Dartiqo ↗</a></div>`}function saveProfile(){if(currentUser)return;try{sessionStorage.setItem('dartiqo-demo-profile',JSON.stringify(profile))}catch{}}
+function photoSrc(p){if(!p)return'';return p.startsWith('data:')?p:url(p)}
+function applyServerUser(u){if(!u)return;profile={...profile,...u};delete profile.pendingPhoto;paintPlayer()}
+async function cropProfilePhoto(dataUrl){return new Promise(resolve=>{if(!dataUrl)return resolve('');const img=new Image();img.onload=()=>{const S=256,c=document.createElement('canvas');c.width=c.height=S;const ctx=c.getContext('2d'),side=Math.min(img.width,img.height),sx=(img.width-side)/2,sy=(img.height-side)/2;ctx.fillStyle='#fff';ctx.fillRect(0,0,S,S);ctx.drawImage(img,sx,sy,side,side,0,0,S,S);resolve(c.toDataURL('image/jpeg',.85))};img.onerror=()=>resolve('');img.src=dataUrl})}
 function recovery(reset){return authShell(`<span class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">${reset?'NOVÝ ZAČÁTEK':'ZPÁTKY K ÚČTU'}</span><h1>${reset?'Nové heslo.':'Zapomenuté heslo?'}</h1><p class="text-xs mb-5">${reset?'Vytvoř nové heslo o délce 12 až 128 znaků.':'Zadej e-mail a prohlédni si ukázku obnovení.'}</p><form id="recovery-form">${reset?passwordField('reset-pass','Nové heslo')+passwordField('reset-confirm','Potvrzení hesla'):field('recovery-email','E-mail','email','','required')}<button class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020] w-full mt-6">${reset?'Změnit heslo':'Obnovit heslo'} ↗</button><p id="recovery-status" class="mt-2 text-[10px] text-muted" role="status"></p></form><a href="${url("/login")}" class="text-xs text-accent block mt-6">Zpět na přihlášení</a><p class="mt-5 text-[10px] leading-relaxed text-muted">Designové demo. Žádný e-mail se neposílá a heslo se ve skutečnosti nemění.</p>`)}
 function settings(isProfile){return intro('DEMO ÚČET',isProfile?'Tvůj hráčský profil.':'Všechno podle tebe.','Změny zůstanou jen v této lokální ukázce.')+`<section class="mx-auto w-full max-w-7xl px-6 md:px-12 pb-24 max-w-3xl"><nav class="mb-8 flex flex-wrap gap-3"><a class="rounded-full border border-line bg-transparent px-4 py-2 text-xs text-muted [&.active]:border-accent [&.active]:bg-accent [&.active]:text-zinc-900 controls:px-3 controls:py-[7px] controls:text-[10px]" href="${url("/app")}">Přehled</a><a class="rounded-full border border-line bg-transparent px-4 py-2 text-xs text-muted [&.active]:border-accent [&.active]:bg-accent [&.active]:text-zinc-900 controls:px-3 controls:py-[7px] controls:text-[10px]" href="${url("/app/profile")}">Profil</a><a class="rounded-full border border-line bg-transparent px-4 py-2 text-xs text-muted [&.active]:border-accent [&.active]:bg-accent [&.active]:text-zinc-900 controls:px-3 controls:py-[7px] controls:text-[10px]" href="${url("/app/settings")}">Nastavení</a></nav><form class="rounded-3xl border border-line bg-surface p-6 md:p-8" id="profile-form">${isProfile?`<div class="relative mx-auto size-32 touch-none overflow-hidden rounded-full bg-surface-2 [&_img]:pointer-events-none [&_img]:size-full [&_img]:object-cover [&_img]:select-none [&_span]:flex [&_span]:h-full [&_span]:items-center [&_span]:justify-center [&_span]:text-5xl" id="profile-avatar">${profile.photo?`<img src="${url(profile.photo)}" alt="Avatar">`:`<span>${profile.avatar}</span>`}</div><label class="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface px-3 py-3 text-xs font-semibold text-ink hover:border-accent mt-4 cursor-pointer">Změnit fotografii<input class="hidden" type="file" accept="image/*" id="profile-photo"></label>${field('profile-first','Jméno','text',profile.first,'required')}${field('profile-last','Příjmení','text',profile.last,'required')}${field('profile-user','Uživatelské jméno','text',profile.username,'required pattern="[a-zA-Z0-9_]{3,24}"')}`:`<h3>Vzhled a notifikace</h3><button type="button" data-theme class="inline-flex items-center justify-center gap-5 rounded-full border border-line bg-transparent px-6 py-3.5 text-xs font-bold text-ink shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020] mt-5">Přepnout světlý / tmavý režim ◐</button><label class="flex gap-3 items-center"><input type="checkbox" id="notify-demo" checked> Připomínky tréninku</label><label class="flex gap-3 items-center"><input type="checkbox" id="news-demo"> Novinky z Dartiqo</label><h3 class="mt-7">Propojené účty</h3><div class="grid gap-3 mt-4">${socials()}</div><a href="${url("/reset-password")}" class="text-xs text-accent block mt-6">Změnit heslo ↗</a>`}<button class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020] mt-7" type="submit">Uložit demo změny ↗</button></form></section>`}
 function other(){if(route==='/features')return intro('DARTIQO V KOSTCE','Všechno pro hru.<br><span class="text-accent">Nic navíc.</span>','Sedm oblastí jedné platformy. Proklikni si připravované funkce.')+`<section class="mx-auto w-full max-w-7xl px-6 md:px-12 pb-24 grid md:grid-cols-2 gap-4">${stories.map((s,i)=>`<a class="rounded-3xl border border-line bg-surface p-6 md:p-8" href="${url(s[3])}"><span class="text-accent text-3xl">0${i+1}</span><h3 class="mt-6">${s[0]} ↗</h3><p class="text-sm mt-3">${s[1]}</p></a>`).join('')}</section>`;if(route==='/leaderboards')return intro('RANKED / UKÁZKOVÝ ŽEBŘÍČEK','Další příčka<br><span class="text-accent">je na dosah.</span>','Prohlédni si modelové pořadí hráčů. Žádná data zde nejsou živá.')+`<section class="mx-auto w-full max-w-7xl px-6 md:px-12 pb-24"><div class="flex gap-3 mb-6"><button class="rounded-full border border-line bg-transparent px-4 py-2 text-xs text-muted [&.active]:border-accent [&.active]:bg-accent [&.active]:text-zinc-900 controls:px-3 controls:py-[7px] controls:text-[10px] active" data-ranking="rating">Podle ratingu</button><button class="rounded-full border border-line bg-transparent px-4 py-2 text-xs text-muted [&.active]:border-accent [&.active]:bg-accent [&.active]:text-zinc-900 controls:px-3 controls:py-[7px] controls:text-[10px]" data-ranking="average">Podle průměru</button></div><div class="rounded-3xl border border-line bg-surface p-6 md:p-8" id="rank-table"></div></section>`;if(route==='/tournaments')return intro('TURNAJOVÝ KALENDÁŘ','Velké momenty.<br><span class="text-accent">Malý začátek.</span>','Vyber si modelový turnaj a prohlédni si detail formátu.')+`<section class="mx-auto w-full max-w-7xl px-6 md:px-12 pb-24 grid md:grid-cols-3 gap-5">${['Páteční pohár','Dartiqo Open','Rookie Night'].map((n,i)=>`<article class="rounded-3xl border border-line bg-surface p-6 md:p-8"><span class="rounded-full bg-surface-2 px-3 py-1.5 text-[9px] uppercase tracking-widest text-muted">UKÁZKA / ${16+i*4}. ŘÍJNA</span><div class="text-6xl text-accent my-8">♜</div><h3>${n}</h3><p class="text-sm mt-3">${16*(i+1)} hráčů · 501 · Double out</p><button class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020] mt-6" data-tournament="${n}">Detail turnaje ↗</button></article>`).join('')}</section>`;if(route==='/contact')return intro('KONTAKT','Dobrá hra začíná<br><span class="text-accent">rozhovorem.</span>','Máš nápad, co by v Dartiqo nemělo chybět? Vyzkoušej návrh kontaktního formuláře.')+`<section class="mx-auto w-full max-w-7xl px-6 md:px-12 pb-24 max-w-3xl"><form id="contact-form" class="rounded-3xl border border-line bg-surface p-6 md:p-8">${field('contact-name','Jméno','text','','required')}${field('contact-email','E-mail','email','','required')}<label for="message">Zpráva</label><textarea class="w-full rounded-xl p-4 border border-zinc-500/30 bg-transparent" id="message" rows="5" required></textarea><button class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020] mt-5">Zkontrolovat zprávu ↗</button><p class="mt-5 text-[10px] leading-relaxed text-muted">Formulář je demonstrační. Zpráva nebude odeslána.</p></form></section>`;return intro('O DARTIQO','Pro lidi,<br><span class="text-accent">kteří chtějí hrát.</span>','Dartiqo vzniká s jednoduchou myšlenkou: propojit samotnou hru, trénink a dlouhodobý posun do jednoho prostředí.')+`<section class="mx-auto w-full max-w-7xl px-6 md:px-12 pb-24"><div class="grid md:grid-cols-3 gap-5">${[['01','Hra je na prvním místě.','Přehledné skóre a soustředění na další hod.'],['02','Zlepšení má být vidět.','Statistiky mají pomoci vybrat další trénink.'],['03','Každý má svůj příběh.','Kariéra dává jednotlivým zápasům další souvislost.']].map(([n,h,p])=>`<article class="rounded-3xl border border-line bg-surface p-6 md:p-8"><span class="text-accent text-5xl">${n}</span><h3 class="mt-7">${h}</h3><p class="text-sm mt-3">${p}</p></article>`).join('')}</div><details class="rounded-3xl border border-line bg-surface p-6 md:p-8 mt-5"><summary class="cursor-pointer font-bold">V jaké fázi je tento web?</summary><p class="text-sm mt-4">Jde o designový frontend. Přihlášení, online hráči, statistiky, AI analýzy a kariérní události jsou demonstrační. Propojení s reálnou aplikací je další krok.</p></details></section>`}
@@ -34,7 +37,7 @@ function paintPublicChart(period){const host=$('#stats-chart');if(!host)return;i
 function setPeriod(n){if($('#stats-chart'))paintPublicChart(n);const v=n==='7 dní'?['60.2','67.4','35 %','31 %','4','121','68 %']:n==='90 dní'?['52.0','58.6','26 %','24 %','17','141','58 %']:['58.4','64.1','32 %','29 %','9','121','64 %'];if($('#kpis'))$('#kpis').innerHTML=['3 Dart Average','First 9 Average','Checkout','Double','180s','Highest Checkout','Win Rate'].map((x,i)=>`<div class="rounded-3xl border border-line bg-surface p-6 md:p-8"><span class="text-[10px] font-bold uppercase tracking-[.22em] text-muted">${x}</span><div class="mt-3 font-display text-4xl font-bold">${v[i]}</div></div>`).join('');$$('[data-period]').forEach(b=>b.classList.toggle('active',b.dataset.period===n))}
 if($('#stats-chart')){setPeriod('30 dní');$$('[data-period]').forEach(b=>b.onclick=()=>setPeriod(b.dataset.period));new MutationObserver(()=>{const active=$$('[data-period]').find(b=>b.classList.contains('active'));paintPublicChart(active?.dataset.period||'30 dní')}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']})}
 if($('#login-form'))$('#login-form').onsubmit=async e=>{e.preventDefault();const b=$('#login-form button[type=submit]'),label=b.textContent,fb=$('#auth-feedback');if(!$('#identity').value.trim()||!$('#login-password').value){fb.textContent='Vyplň přihlašovací údaje.';return}b.disabled=true;b.textContent='Přihlašování…';fb.textContent='';try{const r=await api('/login',{identity:$('#identity').value,password:$('#login-password').value,remember:!!$('#remember')?.checked});if(r.ok){try{sessionStorage.removeItem('dartiqo-demo-profile')}catch{}location.href=url('/app');return}fb.textContent=r.message||'Přihlášení se nepovedlo.'}catch{fb.textContent='Server je teď nedostupný. Zkus to za chvíli.'}b.disabled=false;b.textContent=label};if(route==='/register')renderRegister();if($('#recovery-form'))$('#recovery-form').onsubmit=e=>{e.preventDefault();if(route==='/reset-password'&&$('#reset-pass').value!==$('#reset-confirm').value){$('#recovery-status').textContent='Hesla se neshodují.';return}$('#recovery-form').innerHTML=route==='/reset-password'?'<div class="text-5xl text-accent py-5">✓</div><h3>Ukázka změny dokončena.</h3><p class="text-xs mt-3">Žádné skutečné heslo se nezměnilo.</p>':'<div class="text-5xl text-accent py-5">↗</div><h3>Takto bude vypadat potvrzení.</h3><p class="text-xs mt-3">Žádný e-mail jsme neodeslali.</p><a href="'+url("/reset-password")+'" class="inline-flex items-center justify-center gap-5 rounded-full bg-accent px-6 py-3.5 text-xs font-bold text-black shadow-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_8px_30px_#faff0020] mt-5">Ukázka nového hesla ↗</a>'};
-if($('#profile-form'))$('#profile-form').onsubmit=e=>{e.preventDefault();if(route==='/app/profile'){profile.first=$('#profile-first').value;profile.last=$('#profile-last').value;profile.username=$('#profile-user').value;saveProfile();paintPlayer()}else{try{sessionStorage.setItem('dartiqo-demo-settings',JSON.stringify({notify:$('#notify-demo').checked,news:$('#news-demo').checked}))}catch{}}toast('Demo změny jsou uložené pro tuto relaci.')};if($('#notify-demo'))try{const v=JSON.parse(sessionStorage.getItem('dartiqo-demo-settings'));if(v){$('#notify-demo').checked=v.notify;$('#news-demo').checked=v.news}}catch{}if($('#profile-photo'))$('#profile-photo').onchange=e=>{const f=e.target.files[0];if(!f)return;if(!f.type.startsWith('image/')||f.size>5*1024*1024){toast('Vyber obrázek do 5 MB.');return}const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),scale=Math.max(128/img.width,128/img.height);ctx.drawImage(img,(128-img.width*scale)/2,(128-img.height*scale)/2,img.width*scale,img.height*scale);profile.photo=c.toDataURL('image/jpeg',.8);paintPlayer()};img.src=fr.result};fr.readAsDataURL(f)};
+if($('#profile-form'))$('#profile-form').onsubmit=async e=>{e.preventDefault();if(route!=='/app/profile'){try{sessionStorage.setItem('dartiqo-demo-settings',JSON.stringify({notify:$('#notify-demo').checked,news:$('#news-demo').checked}))}catch{}toast('Demo změny jsou uložené pro tuto relaci.');return}const btn=$('#profile-form button[type=submit]'),status=$('#profile-status'),label=btn?.textContent;if(status){status.hidden=true;status.classList.add('hidden');status.textContent=''}const payload={first:$('#profile-first').value,last:$('#profile-last').value,username:$('#profile-user').value,email:($('#profile-email')?.value||profile.email||'').trim()};if(profile.pendingPhoto)payload.photo=await cropProfilePhoto(profile.pendingPhoto);if(!currentUser){Object.assign(profile,payload);if(payload.photo)profile.photo=payload.photo;delete profile.pendingPhoto;saveProfile();paintPlayer();toast('Demo změny jsou uložené pro tuto relaci.');return}if(btn){btn.disabled=true;btn.textContent='Ukládám…'}let r;try{r=await api('/app/profile',payload)}catch{r={ok:false,message:'Server je teď nedostupný. Zkus to za chvíli.'}}if(btn){btn.disabled=false;btn.textContent=label||'Uložit změny'}if(!r.ok){const msg=Object.values(r.errors||{})[0]||r.message||'Uložení se nepovedlo.';if(status){status.textContent=msg;status.hidden=false;status.classList.remove('hidden')}toast(msg);return}applyServerUser(r.user);toast('Profil je uložený. Změny jdou i do aplikace.')};if($('#notify-demo'))try{const v=JSON.parse(sessionStorage.getItem('dartiqo-demo-settings'));if(v){$('#notify-demo').checked=v.notify;$('#news-demo').checked=v.news}}catch{}if($('#profile-photo'))$('#profile-photo').onchange=e=>{const f=e.target.files[0];if(!f)return;if(!f.type.startsWith('image/')||f.size>5*1024*1024){toast('Vyber obrázek do 5 MB.');return}const fr=new FileReader();fr.onload=()=>{profile.pendingPhoto=fr.result;profile.photo=fr.result;paintPlayer();if(!currentUser){saveProfile();toast('Fotka je připravená v demu.')}else toast('Fotka je připravená. Ulož profil, ať se propsíše i do aplikace.')};fr.readAsDataURL(f)};
 function ranking(type){const data=players.map((p,i)=>({name:p[0],average:p[1],rating:[1540,1670,1590,1430][i]})).sort((a,b)=>b[type]-a[type]);$('#rank-table').innerHTML='<div class="grid grid-cols-4 items-center gap-3 border-b border-line py-4 text-xs text-zinc-500"><span>POŘADÍ</span><span>HRÁČ</span><span>RATING</span><span>PRŮMĚR</span></div>'+data.map((p,i)=>`<div class="grid grid-cols-4 items-center gap-3 border-b border-line py-4 text-xs"><b class="text-accent">0${i+1}</b><b>${p.name}</b><span>${p.rating}</span><span>${p.average}</span></div>`).join('')}if($('#rank-table'))ranking('rating');$$('[data-ranking]').forEach(b=>b.onclick=()=>{ranking(b.dataset.ranking);$$('[data-ranking]').forEach(x=>x.classList.toggle('active',x===b))});$$('[data-tournament]').forEach(b=>b.onclick=()=>modal(b.dataset.tournament,'Formát: 501, double out, vyřazovací pavouk. Zápasy na tři vítězné legy.<br><br>Tento turnaj je pouze ukázkový. Registrace do skutečné soutěže není aktivní.'));if($('#contact-form'))$('#contact-form').onsubmit=e=>{e.preventDefault();toast('Formulář je vyplněný. Jde o demo, zpráva nebyla odeslána.')};
 // Exact board geometry and three-dart checkout demo.
 let demo={score:81,start:81,darts:0,done:false,busy:false},demoFrame;const demoTargets=[40,62,81,100,121,170],solutions={40:'D20',62:'T10 → D16',81:'T19 → D12',100:'T20 → D20',121:'T20 → T11 → D14',170:'T20 → T20 → BULL'};function freshChallenge(){cancelAnimationFrame(demoFrame);const choices=demoTargets.filter(n=>n!==demo.start),n=choices[Math.floor(Math.random()*choices.length)];demo={score:n,start:n,darts:0,done:false,busy:false};$('#score').textContent=n;$('#dart-count').textContent='0 / 3 šipky';$('#demo-message').textContent='Poslední šipka musí být double.';$$('[data-dart]').forEach(e=>e.remove())}function applyHit(n,dbl){const rest=demo.score-n;demo.darts++;if(rest<0||rest===1||(rest===0&&!dbl)){demo.done=true;$('#demo-message').textContent='Přehozeno. Zkus novou výzvu.'}else{const from=demo.score;demo.score=rest;cancelAnimationFrame(demoFrame);const start=performance.now();function tick(t){const p=reduced?1:Math.min((t-start)/450,1);$('#score').textContent=Math.round(from+(rest-from)*(1-(1-p)**3));if(p<1)demoFrame=requestAnimationFrame(tick)}demoFrame=requestAnimationFrame(tick);demo.done=rest===0||demo.darts===3;$('#demo-message').textContent=rest===0?'Zavřeno! Tohle byl tvůj moment.':demo.done?'Tři šipky jsou pryč. Dej si další pokus.':'Dobrý hod. Pokračuj.'}$('#dart-count').textContent=demo.darts+' / 3 šipky'}if($('#board')){const svg=$('#board'),nums=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5],xy=(r,a)=>[250+r*Math.cos(a*Math.PI/180),250+r*Math.sin(a*Math.PI/180)];let out='<circle cx="250" cy="250" r="246" fill="#181818" stroke="#555" stroke-width="3"/>';nums.forEach((n,i)=>{const a=-99+i*18,b=a+18;[[16,119,1],[119,132,3],[132,190,1],[190,204,2]].forEach(([r1,r2,m])=>{out+=`<path class="cursor-crosshair hover:brightness-125" role="button" tabindex="0" aria-label="${m===3?'Triple ':m===2?'Double ':''}${n}" data-hit="${n*m}" data-double="${m===2}" d="M${xy(r1,a)} L${xy(r2,a)} A${r2},${r2} 0 0 1 ${xy(r2,b)} L${xy(r1,b)} A${r1},${r1} 0 0 0 ${xy(r1,a)}Z" fill="${m===1?(i%2?'#e9dfc5':'#202020'):(i%2?'#16754c':'#ba3437')}" stroke="#a6a392" stroke-width=".8"/>`});const pos=xy(222,a+9);out+=`<text x="${pos[0]}" y="${pos[1]}" fill="#eee" text-anchor="middle" dominant-baseline="central" font-size="18" font-family="Arial">${n}</text>`});out+='<circle class="cursor-crosshair hover:brightness-125" role="button" tabindex="0" aria-label="Bull 25" data-hit="25" cx="250" cy="250" r="16" fill="#16754c"/><circle class="cursor-crosshair hover:brightness-125" role="button" tabindex="0" aria-label="Bull 50" data-hit="50" data-double="true" cx="250" cy="250" r="7" fill="#ba3437"/>';svg.innerHTML=out;$$('[data-hit]').forEach(el=>{function fire(e){if(demo.done||demo.busy)return;demo.busy=true;$('#new-challenge').disabled=true;const box=el.getBBox();let pos={x:box.x+box.width/2,y:box.y+box.height/2};if(e.type==='click'&&e.detail){const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;pos=pt.matrixTransform(svg.getScreenCTM().inverse())}const mark=document.createElementNS('http://www.w3.org/2000/svg','g');mark.setAttribute('transform',`translate(${pos.x} ${pos.y})`);mark.classList.add('pointer-events-none','animate-dart');mark.dataset.dart='';mark.innerHTML='<path d="M0 0 L23 -30" stroke="#ddd" stroke-width="2"/><path d="M12 -16 L29 -39" stroke="#777" stroke-width="5"/><path d="M27 -36 L42 -57" stroke="#ddd" stroke-width="2"/><path d="M37 -50 L39 -71 L57 -76 L57 -57 L42 -50Z" fill="#faff00" stroke="#747900"/><path d="M42 -55 L65 -61 L59 -42Z" fill="#bcc600"/>';svg.append(mark);setTimeout(()=>{applyHit(+el.dataset.hit,el.dataset.double==='true');demo.busy=false;$('#new-challenge').disabled=false},reduced?0:400)}el.onclick=fire;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fire(e)}}});$('#new-challenge').onclick=freshChallenge;$('#checkout-hint').onclick=()=>$('#demo-message').textContent='Cesta z původního skóre '+demo.start+': '+solutions[demo.start];freshChallenge()}
@@ -50,31 +53,54 @@ function paintPlayer(){
   const first=profile.first||'Alex';
   const full=((profile.first||'')+' '+(profile.last||'')).trim()||'Alex Novák';
   const letter=first.slice(0,1).toUpperCase();
+  const src=photoSrc(profile.photo);
   $$('[data-player-first]').forEach(el=>{el.textContent=first});
   $$('[data-player-full]').forEach(el=>{el.textContent=full});
   $$('[data-player-user]').forEach(el=>{el.textContent='@'+profile.username});
   $$('[data-player-avatar]').forEach(el=>{
     el.replaceChildren();
-    if(profile.photo){const img=document.createElement('img');img.src=url(profile.photo);img.alt='';el.append(img)}
+    if(src){const img=document.createElement('img');img.src=src;img.alt='';el.append(img)}
     else el.textContent=letter;
   });
   const crop=$('#profile-avatar');
   if(crop){
     crop.replaceChildren();
-    if(profile.photo){const img=document.createElement('img');img.src=url(profile.photo);img.alt='Profilová fotka';crop.append(img)}
+    if(src){const img=document.createElement('img');img.src=src;img.alt='Profilová fotka';crop.append(img)}
     else{const span=document.createElement('span');span.textContent=letter;crop.append(span)}
   }
-  if($('#profile-first'))$('#profile-first').value=profile.first;
-  if($('#profile-last'))$('#profile-last').value=profile.last;
-  if($('#profile-user'))$('#profile-user').value=profile.username;
+  if($('#profile-first'))$('#profile-first').value=profile.first||'';
+  if($('#profile-last'))$('#profile-last').value=profile.last||'';
+  if($('#profile-user'))$('#profile-user').value=profile.username||'';
+  if($('#profile-email'))$('#profile-email').value=profile.email||'';
 }
 paintPlayer();
+(function watchProfile(){
+  const host=$('#profile-sync');
+  if(!currentUser||!host?.dataset.stream||typeof EventSource==='undefined')return;
+  let es,last=String(profile.profileRevision||'');
+  const connect=()=>{
+    es=new EventSource(host.dataset.stream,{withCredentials:true});
+    es.onmessage=e=>{
+      try{
+        const data=JSON.parse(e.data);
+        if(!data.user)return;
+        const rev=String(data.user.profileRevision||'');
+        if(rev&&rev===last)return;
+        last=rev;
+        applyServerUser(data.user);
+      }catch{}
+    };
+    es.onerror=()=>{es.close();setTimeout(connect,2000)};
+  };
+  connect();
+})();
 $$('[data-logout]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('/logout')}catch{}try{sessionStorage.removeItem('dartiqo-demo-profile')}catch{}location.href=url('/')});
 
 function openSheet(id){const d=document.getElementById(id);if(d&&typeof d.showModal==='function'&&!d.open)d.showModal()}
 function closeSheet(node){node?.closest('dialog')?.close()}
 $$('[data-sheet]').forEach(b=>b.addEventListener('click',e=>{if(b.dataset.nested){e.preventDefault();closeSheet(b)}openSheet(b.dataset.sheet)}));
 $$('[data-sheet-close]').forEach(b=>b.onclick=()=>closeSheet(b));
+$$('[data-delete-match]').forEach(b=>b.onclick=async()=>{const err=$('[data-delete-error]',b.closest('dialog'));b.disabled=true;b.textContent='Mažu…';const res=await api(b.dataset.deleteMatch,{}).catch(()=>({status:0}));if(res.ok){location.href=url('/app/games');return}b.disabled=false;b.textContent='Smazat';err.textContent=res.message||'Smazání se nepovedlo. Zkus to znovu.';err.hidden=false;err.classList.remove('hidden')});
 $$('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
 
 if(route==='/app'&&(location.hash==='#stats'||location.hash==='#statistics'))location.replace(url('/app/statistics'));
@@ -92,8 +118,8 @@ if(dashNode){
   const trendLabels=n=>Array.from({length:n},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(n-1-i));if(n===1)return 'Dnes';if(n<=7)return dayNames[d.getDay()];return d.getDate()+'. '+(d.getMonth()+1)+'.'});
   const paintChart=values=>{
     const canvas=$('#stat-chart');if(!canvas)return;
-    const list=(values||[]).map(Number);
-    if(!list.length){charts.trend?.destroy();charts.trend=null;return}
+    const list=(values||[]).map(v=>v==null?null:Number(v));
+    if(!list.some(v=>v!==null)){charts.trend?.destroy();charts.trend=null;return}
     const labels=trendLabels(list.length);
     const avg=v=>'Průměr '+String(v).replace('.',',');
     const yBase={grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#71717a',font:{size:10},maxTicksLimit:5},border:{display:false}};
@@ -297,14 +323,12 @@ const liveBanner=$('#live-banner');
 const livePage=$('#live-page');
 if(liveBanner&&typeof EventSource!=='undefined'){
   const dismissKey='dartiqo-live-dismissed';
-  const playerGrid={1:'',2:'sm:grid-cols-2',3:'sm:grid-cols-2 xl:grid-cols-3',4:'sm:grid-cols-2 xl:grid-cols-4'};
-  let current=null,lastScores=[];
+  let current=null;
   const matchup=m=>m.players.length===2?m.players[0].name+' vs '+m.players[1].name:m.players.map(p=>p.name).join(' · ');
   const scoreline=m=>m.players.map(p=>escapeHtml(p.score)).join('<span class="px-1.5 text-zinc-600">:</span>');
   const winnerName=m=>m.winner!=null&&m.players[m.winner]?m.players[m.winner].name:null;
   const progress=m=>(m.setsToWin>1?'Set '+m.set+' · ':'')+'Leg '+m.leg;
   const dartValue=d=>{if(d==='MISS')return 0;if(d==='BULL')return 50;if(d==='25')return 25;return +d.slice(1)*({S:1,D:2,T:3}[d[0]]||1)};
-  const markGlyph=n=>['','/','✕','⊗'][n]||'';
   const dismissed=()=>{try{return sessionStorage.getItem(dismissKey)}catch{return null}};
 
   const liveHero=$('#live-hero');
@@ -398,75 +422,232 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     $('[data-live-dismiss]',liveBanner).onclick=()=>{try{sessionStorage.setItem(dismissKey,m.id+':'+m.status)}catch{}liveBanner.hidden=true};
   };
 
-  const playerCard=(m,p,i)=>{
-    const active=m.status==='live'&&m.active===i&&m.winner==null;
-    const won=m.winner===i;
-    const changed=lastScores[i]!==undefined&&lastScores[i]!==p.score;
-    const tag=won?'<span class="chip bg-emerald-400 text-black">Vítěz</span>':active?'<span class="chip bg-accent text-black">Na tahu</span>':'';
-    const legs=m.setsToWin>1?`${p.sets} <small class="text-zinc-500">/ ${p.legs}</small>`:String(p.legs);
-    const marks=m.mode==='cricket'&&m.numbers.length?`<div class="flex flex-wrap gap-1.5">${m.numbers.map(n=>`<span class="tile grid w-10 place-items-center py-1.5 text-center"><small class="text-[10px] text-zinc-500">${n===25?'B':n}</small><b class="num text-sm ${(p.marks[n]||0)>=3?'text-accent':''}">${markGlyph(p.marks[n]||0)||'·'}</b></span>`).join('')}</div>`:'';
-    return `<article class="panel flex flex-col gap-5 transition ${active?'ring-2 ring-accent/70 shadow-[0_0_60px_-20px_#faff0088]!':won?'ring-2 ring-emerald-400/60':''}">
-<header class="flex items-center justify-between gap-3"><span class="flex min-w-0 items-center gap-3"><span class="grid size-11 shrink-0 place-items-center rounded-2xl ${active?'bg-accent text-black':'bg-white/[.06] text-zinc-300'} font-bold">${escapeHtml(p.name.slice(0,1).toUpperCase())}</span><span class="min-w-0"><strong class="block truncate text-lg">${escapeHtml(p.name)}</strong><small class="text-xs text-zinc-500">${p.bot?'Bot':'Hráč'}</small></span></span>${tag}</header>
-<strong class="num block text-[clamp(4.5rem,11vw,9rem)] leading-[.85] ${changed?'animate-reveal':''} ${active?'':'text-zinc-300'}">${escapeHtml(p.score)}</strong>
-<p class="min-h-5 text-sm font-semibold text-accent">${active&&p.checkout?'Zavření: '+escapeHtml(p.checkout):''}</p>
-${marks}
-<dl class="grid grid-cols-4 gap-2 text-center [&_dd]:mt-1 [&_dd]:text-xl [&_dd]:font-semibold [&_dd]:tabular-nums [&_div]:rounded-2xl [&_div]:bg-white/[.035] [&_div]:px-2 [&_div]:py-3 [&_div]:ring-1 [&_div]:ring-white/[.06] [&_div]:ring-inset [&_dt]:text-[10px] [&_dt]:tracking-widest [&_dt]:text-zinc-500 [&_dt]:uppercase">
-<div><dt>${m.setsToWin>1?'Sety / legy':'Legy'}</dt><dd>${legs}</dd></div>
-<div><dt>Průměr</dt><dd>${p.average.toFixed(1)}</dd></div>
-<div><dt>Šipky</dt><dd>${p.darts}</dd></div>
-<div><dt>Poslední</dt><dd>${p.last??'–'}</dd></div>
-</dl>
-</article>`;
+  // Barvy zápasové obrazovky z iOS aplikace (MatchColors, Theme.playerColors)
+  const MC={coral:'#ff5233',amber:'#ff991a',ink:'#0b1a13',green:'#21cc7d',red:'#ff453a',positive:'#4dd984',bull:'#ff9f0a'};
+  const playerColors=['#fefc03','#59c7ff','#ff8c40','#f273d9'];
+  const playerColor=i=>playerColors[i%playerColors.length];
+  const onTurn=(m,i)=>m.status==='live'&&m.winner==null&&m.active===i;
+  const cpuIcon='<svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M10 2v4M14 2v4M10 18v4M14 18v4M2 10h4M2 14h4M18 10h4M18 14h4"/></svg>';
+  const dartColor=d=>d==='MISS'?null:d==='BULL'||d==='25'?MC.bull:d[0]==='T'?MC.red:d[0]==='D'?MC.positive:'#ffffff';
+
+  // Velikosti rostou s výškou okna, aby šel zápas číst i z dálky na monitoru nebo televizi
+  const progressStrip=m=>{
+    const finished=m.status==='finished';
+    const darts=(m.currentDarts||[]).length;
+    const caption=finished?(winnerName(m)?'Vyhrál '+winnerName(m):'Zápas skončil'):(m.setsToWin>1?'Set '+m.set+' · ':'')+'Leg '+m.leg+' · Šipky '+darts+'/3';
+    const tint=i=>m.players.length<=2?(onTurn(m,i)?MC.coral:MC.amber):playerColor(i);
+    const divider='<i class="mx-[.6em] h-[1.2em] w-px shrink-0 bg-white/20" aria-hidden="true"></i>';
+    const score=(title,values,total)=>`${divider}<span class="flex min-w-0 flex-1 items-center justify-center gap-[.4em] whitespace-nowrap"><span class="font-semibold text-white/80">${title}</span><span class="flex items-center gap-[.3em] text-[1.3em] font-extrabold tabular-nums">${values.map((v,i)=>`${i?'<span class="text-white/40">:</span>':''}<span style="color:${tint(i)}">${v}</span>`).join('')}</span><span class="text-[.9em] font-semibold text-white/40 tabular-nums">(do ${total})</span></span>`;
+    return `<div class="match-glass flex min-h-[2.8em] items-center rounded-[14px] px-[.6em] py-[.4em] text-[clamp(13px,1.8vh,28px)] 2xl:rounded-[20px]"><span class="min-w-0 flex-1 truncate text-center font-semibold text-white/80 tabular-nums">${escapeHtml(caption)}</span>${m.setsToWin>1?score('Sety',m.players.map(p=>p.sets),m.setsToWin):''}${m.setsToWin>1||m.legsToWin>1?score('Legy',m.players.map(p=>p.legs),m.legsToWin):''}</div>`;
   };
 
-  const visitRow=(m,v)=>{
+  const panelChips=(m,p,i)=>{
+    const stat=m.mode==='cricket'?['Zavřeno',m.numbers.filter(n=>(p.marks[n]||0)>=3).length+'/'+m.numbers.length]
+      :m.mode==='aroundClock'?['Hotovo',(p.score==='Bull'?20:Math.max(0,+p.score-1))+'/21']
+      :['Ø',p.darts?p.average.toFixed(1):'—'];
+    const won=m.winner===i?`<span class="inline-flex items-center rounded-full px-[.7em] py-[.25em] text-[.8em] font-extrabold uppercase" style="background:${MC.ink};color:${MC.green}">Vítěz</span>`:'';
+    return won+`<span class="inline-flex items-center gap-[.3em] rounded-full px-[.7em] py-[.25em]" style="background:${MC.ink}1f"><span class="text-[.8em] font-extrabold opacity-60">${stat[0]}</span><b class="font-bold tabular-nums">${stat[1]}</b></span>`;
+  };
+
+  // Karty se staví jen jednou na zápas, pak se mění jen hodnoty, aby mohly běžet animace
+  const buildPanels=(grid,m,cols,rows)=>{
+    // Skóre se řídí velikostí scoreboardu (cqw/cqh), ne celého okna
+    const base=`clamp(14px,min(${cols===2?1.9:2.6}cqw,${(5/rows).toFixed(2)}cqh),44px)`;
+    const big=`min(${cols===2?19:30}cqw,${(54/rows).toFixed(1)}cqh)`;
+    grid.className='relative grid flex-1 auto-rows-fr overflow-hidden rounded-[22px] 2xl:rounded-[32px] '+(cols===2?'grid-cols-2':'grid-cols-1');
+    grid.style.background=MC.amber;
+    grid.innerHTML='<i class="pointer-events-none absolute top-0 left-0 z-0 transition-[transform,width,height,background-color] duration-500 ease-[cubic-bezier(.65,0,.35,1)]" data-focus aria-hidden="true"></i>'
+      +m.players.map((p,i)=>`<article class="relative z-[1] flex min-h-0 min-w-0 flex-col p-[1em]" style="color:${MC.ink};font-size:${base}" data-i="${i}">
+<div class="flex min-w-0 items-center gap-[.45em]"><span class="grid size-[1.6em] shrink-0 place-items-center rounded-full text-[.7em] font-bold" style="background:${MC.ink}26">${escapeHtml(p.name.slice(0,1).toUpperCase())}</span><strong class="min-w-0 flex-1 truncate font-semibold">${escapeHtml(p.name)}</strong>${p.bot?cpuIcon.replace('size-3','size-[1em]'):''}</div>
+<strong class="flex min-h-0 flex-1 items-center leading-none font-bold tracking-tight tabular-nums transition-colors duration-500" style="font-size:${big}" data-score></strong>
+<div class="flex flex-wrap gap-[.3em]" data-chips></div>
+</article>`).join('');
+  };
+
+  const placeFocus=(grid,focus,color,instant)=>{
+    const ind=$('[data-focus]',grid),panel=grid.querySelector(`article[data-i="${focus}"]`);
+    if(!ind)return;
+    ind.hidden=!panel;
+    if(!panel)return;
+    if(instant)ind.style.transition='none';
+    Object.assign(ind.style,{width:panel.offsetWidth+'px',height:panel.offsetHeight+'px',transform:`translate(${panel.offsetLeft}px,${panel.offsetTop}px)`,background:color});
+    if(instant){ind.offsetWidth;ind.style.transition=''}
+  };
+
+  // Skóre se k nové hodnotě dopočítá, místo aby skočilo
+  const countTo=(el,text)=>{
+    const prev=el.dataset.value;
+    el.dataset.value=text;
+    cancelAnimationFrame(el._raf);
+    if(reduced||prev===undefined||prev===text||!/^\d+$/.test(prev)||!/^\d+$/.test(text)){el.textContent=text;return}
+    const from=+prev,to=+text,start=performance.now(),duration=Math.min(1100,400+Math.abs(to-from)*5);
+    const step=now=>{
+      const t=Math.min(1,(now-start)/duration);
+      el.textContent=Math.round(from+(to-from)*(1-Math.pow(1-t,3)));
+      if(t<1)el._raf=requestAnimationFrame(step);
+    };
+    el._raf=requestAnimationFrame(step);
+  };
+
+  const paintPlayers=m=>{
+    const grid=$('#live-players');
+    const cols=Math.min(2,m.players.length),rows=Math.ceil(m.players.length/cols);
+    const key=[m.id,cols,...m.players.map(p=>p.name)].join('|');
+    const fresh=grid.dataset.key!==key;
+    if(fresh){buildPanels(grid,m,cols,rows);grid.dataset.key=key}
+    m.players.forEach((p,i)=>{
+      const panel=grid.querySelector(`article[data-i="${i}"]`);
+      const active=onTurn(m,i);
+      panel.setAttribute('aria-current',active?'true':'false');
+      const score=$('[data-score]',panel);
+      score.style.color=active?'#fff':MC.ink;
+      countTo(score,String(p.score));
+      $('[data-chips]',panel).innerHTML=panelChips(m,p,i);
+    });
+    const focus=m.winner??m.active;
+    grid._focus=[focus,m.winner!=null?MC.green:MC.coral];
+    placeFocus(grid,...grid._focus,fresh);
+    if(!grid._ro&&typeof ResizeObserver!=='undefined'){
+      grid._ro=new ResizeObserver(()=>grid._focus&&placeFocus(grid,...grid._focus,true));
+      grid._ro.observe(grid);
+    }
+    const notch=$('#live-notch');
+    notch.hidden=focus==null||!m.players[focus];
+    if(!notch.hidden)notch.style.left=((focus%cols)+.5)/cols*100+'%';
+  };
+
+  const throwSlot=(i,dart,tip,fresh)=>{
+    if(dart)return `<div class="flex flex-1 flex-col items-center justify-center gap-[.15em] ${fresh?'animate-reveal':''}"><span class="text-[.6em] font-bold text-white/45">${i+1}</span><b class="text-[1.9em] leading-none font-bold tabular-nums">${dartValue(dart)}</b><span class="text-[.8em] font-bold text-white/70">${escapeHtml(dart)}</span></div>`;
+    if(tip)return `<div class="flex flex-1 flex-col items-center justify-center gap-[.15em]" style="color:${MC.green}"><span class="flex items-center gap-[.25em] text-[.6em] font-extrabold opacity-70"><svg class="size-[.9em]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/></svg>AI</span><b class="text-[1.9em] leading-none font-extrabold">${escapeHtml(tip)}</b><span class="text-[.8em] font-bold tabular-nums opacity-75">${dartValue(tip)}</span></div>`;
+    return `<div class="flex flex-1 flex-col items-center justify-center gap-[.15em]"><span class="text-[.6em] font-bold text-white/40">${i+1}</span><b class="text-[1.9em] leading-none font-bold text-white/30">—</b><span class="text-[.8em] font-semibold text-white/50">${i+1}. šipka</span></div>`;
+  };
+
+  const throwStrip=m=>{
+    const darts=m.currentDarts||[];
+    const player=m.players[m.active];
+    const route=m.status==='live'&&m.mode==='x01'&&player?.checkout?player.checkout.split(' '):[];
+    const slots=[0,1,2].map(i=>(i?'<i class="my-auto h-[2.6em] w-px shrink-0 bg-white/20" aria-hidden="true"></i>':'')+throwSlot(i,darts[i],darts[i]?null:route[i-darts.length],i===darts.length-1)).join('');
+    return `<div class="match-glass flex h-[7.5em] items-stretch gap-[.4em] rounded-[14px] px-[.6em] py-[.4em] text-[clamp(16px,2.9vh,46px)] 2xl:rounded-[20px]" aria-label="Aktuální hod">${slots}</div>`;
+  };
+
+  const cricketCard=m=>{
+    const symbol=n=>['—','/','×','⊗'][Math.min(3,Math.max(0,n))];
+    const head=`<tr><th class="w-[4em]"></th>${m.numbers.map(n=>`<th class="px-[.3em] pb-[.4em] text-[.8em] font-bold" style="color:${MC.ink}73">${n===25?'B':n}</th>`).join('')}</tr>`;
+    const rows=m.players.map((p,i)=>`<tr><td class="max-w-[4em] truncate pr-[.5em] text-left text-[.75em] font-bold" style="color:${onTurn(m,i)?MC.coral:MC.ink+'b3'}">${escapeHtml(p.name)}</td>${m.numbers.map(n=>{const k=p.marks[n]||0;return `<td class="h-[1.7em] px-[.3em] text-center font-bold" style="color:${k>=3?MC.green:MC.ink+'b8'}">${symbol(k)}</td>`}).join('')}</tr>`).join('');
+    return `<div class="overflow-x-auto rounded-[22px] bg-[#fff] px-[.8em] py-[.6em] text-[clamp(15px,2.1vh,34px)]"><table class="w-full border-collapse text-center">${head}${rows}</table></div>`;
+  };
+
+
+  // Jedna řádka = jedno kolo. Chronologicky od začátku dolů.
+  const visitRow=(m,v,open,n)=>{
     const name=m.players[v.player]?.name||'';
-    const flag=v.bust?'<span class="chip bg-rose-500/15 text-rose-300">Přehoz</span>':v.checkout?'<span class="chip bg-emerald-400/15 text-emerald-300">Zavřeno</span>':'';
-    return `<div class="tile flex items-center gap-3 px-4 py-3"><strong class="w-28 shrink-0 truncate text-sm">${escapeHtml(name)}</strong><span class="flex min-w-0 flex-1 flex-wrap gap-1">${v.darts.map(d=>`<span class="rounded-lg bg-white/[.06] px-2 py-1 text-xs font-semibold">${escapeHtml(d)}</span>`).join('')}</span>${flag}<b class="num w-12 shrink-0 text-right text-xl ${v.score===180?'text-accent':''}">${v.bust?0:v.score}</b></div>`;
+    const tint=playerColor(v.player);
+    const total=v.darts.reduce((s,d)=>s+dartValue(d),0);
+    const score=open?total:v.bust?null:v.score;
+    const scoreColor=v.bust||score===180?MC.red:v.checkout?MC.positive:open?'#fefc03':'#fff';
+    const marks=v.darts.length
+      ?v.darts.map(d=>{const c=dartColor(d)||'#ffffffaa';return `<span class="font-bold tabular-nums" style="color:${c}">${d==='MISS'?'–':escapeHtml(d)}</span>`}).join('<span class="text-white/20">·</span>')
+      :'<span class="text-white/30">—</span>';
+    const note=v.bust?'Přehoz':v.checkout?'Zavřeno':open?'Hází':'';
+    return `<div class="grid shrink-0 grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_auto] items-center gap-x-2 rounded-xl px-1.5 py-2 text-[clamp(13px,1.55vh,22px)] ${open?'bg-[#fefc03]/18 ring-1 ring-[#fefc03]/35 ring-inset':v.bust?'bg-[#ff453a]/12':v.checkout?'bg-[#4dd984]/12':n%2?'bg-white/[.03]':''}">
+<span class="flex min-w-0 items-center gap-1.5"><i class="size-2 shrink-0 rounded-full" style="background:${tint}" aria-hidden="true"></i><strong class="truncate font-semibold">${escapeHtml(name)}</strong>${open?'<span class="shrink-0 rounded bg-[#fefc03] px-1 py-px text-[9px] font-extrabold tracking-wide text-black uppercase">teď</span>':''}</span>
+<span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 leading-none">${marks}${note&&!open?`<span class="text-[.65em] font-semibold text-white/40">${note}</span>`:''}</span>
+<span class="text-right leading-none"><b class="text-[1.35em] font-extrabold tabular-nums" style="color:${scoreColor}">${score==null?'BUST':score}</b></span>
+</div>`;
+  };
+
+  const legHeader=(m,leg,set,live)=>{
+    const playsSets=m.setsToWin>1;
+    const title=playsSets?`Set ${set} · Leg ${leg}`:`Leg ${leg}`;
+    return `<div class="mt-2 flex shrink-0 items-center gap-2 first:mt-0"><span class="text-[11px] font-extrabold tracking-[.14em] text-white/55 uppercase 2xl:text-xs">${title}</span>${live?'<span class="rounded bg-white/15 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-white/80 uppercase">teď</span>':''}<i class="h-px flex-1 bg-white/10" aria-hidden="true"></i></div>`;
+  };
+
+  // Když telefon ještě neposílá leg u kola, odhadneme ho podle zavření
+  const withLegs=(m,list)=>{
+    let leg=1,set=1,setLegs=m.players.map(()=>0);
+    return list.map(v=>{
+      if(v.leg!=null)return {...v,leg:+v.leg,set:+(v.set||1)};
+      const row={...v,leg,set};
+      if(v.checkout&&!v.bust){
+        setLegs[v.player]=(setLegs[v.player]||0)+1;
+        leg+=1;
+        if(m.setsToWin>1&&setLegs[v.player]>=m.legsToWin){set+=1;setLegs=m.players.map(()=>0)}
+      }
+      return row;
+    });
+  };
+
+  const visitLog=(m,finished)=>{
+    const open=!finished&&(m.currentDarts||[]).length;
+    const rows=withLegs(m,m.visits||[]);
+    if(open)rows.push({player:m.active,darts:m.currentDarts,leg:m.leg,set:m.set||1,_open:true});
+    if(!rows.length)return '<span class="block py-6 text-center text-sm text-white/50">Zatím nepadla žádná šipka.</span>';
+    let html='',prev='',n=0;
+    for(const v of rows){
+      const key=`${v.set||1}:${v.leg||1}`;
+      if(key!==prev){
+        html+=legHeader(m,v.leg||1,v.set||1,!finished&&(v.leg||1)===m.leg&&(v.set||1)===(m.set||1));
+        prev=key;n=0;
+      }
+      html+=visitRow(m,v,!!v._open,n++);
+    }
+    return html;
   };
 
   const paintBadge=m=>{
     const badge=$('#live-badge');
-    if(!m){badge.className='chip bg-white/[.06] text-zinc-400';badge.textContent='Bez zápasu';return}
+    const base='inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase 2xl:text-xs ';
+    if(!m){badge.className=base+'bg-white/10 text-white/60';badge.textContent='Bez zápasu';return}
     const finished=m.status==='finished';
-    badge.className=finished?'chip bg-emerald-400/15 text-emerald-300':'chip bg-rose-500/15 text-rose-300';
-    badge.innerHTML=finished?'Konec':'<i class="size-1.5 animate-pulse rounded-full bg-rose-400"></i>Živě';
+    badge.className=base+(finished?'bg-[#21cc7d] text-[#0b1a13]':'bg-[#ff5233] text-white');
+    badge.innerHTML=finished?'Konec':'<i class="size-1.5 animate-pulse rounded-full bg-white"></i>Živě';
   };
 
   const paintPage=m=>{
     const board=$('#live-board'),empty=$('#live-empty');
     paintBadge(m);
     if(!m){
-      board.hidden=true;empty.hidden=false;lastScores=[];
-      $('#live-meta').textContent='';$('#live-title').innerHTML='Živý zápas<span class="text-accent">.</span>';
+      board.hidden=true;empty.hidden=false;$("#live-players").dataset.key="";
+      $('#live-meta').textContent='';$('#live-title').textContent='Živý zápas';
       return;
     }
     const finished=m.status==='finished';
     board.hidden=false;empty.hidden=true;
     const started=new Date(m.startedAt);
     $('#live-meta').textContent=[m.title,progress(m),'začátek '+started.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'})].filter(Boolean).join(' · ');
-    $('#live-title').innerHTML=escapeHtml(matchup(m))+'<span class="text-accent">.</span>';
-    const grid=$('#live-players');
-    grid.className='grid gap-4 '+(playerGrid[m.players.length]||'');
-    grid.innerHTML=m.players.map((p,i)=>playerCard(m,p,i)).join('');
-    lastScores=m.players.map(p=>p.score);
-    const darts=m.currentDarts||[];
-    $('#live-darts').innerHTML=[0,1,2].map(i=>darts[i]?`<span class="grid h-20 place-items-center rounded-2xl bg-accent/10 text-2xl font-bold text-accent ring-1 ring-accent/30 ring-inset ${i===darts.length-1?'animate-reveal':''}">${escapeHtml(darts[i])}</span>`:'<span class="grid h-20 place-items-center rounded-2xl border border-dashed border-white/10 text-zinc-600">–</span>').join('');
-    $('#live-visit-sum').textContent=darts.reduce((s,d)=>s+dartValue(d),0);
-    const winner=winnerName(m);
-    $('#live-turn').textContent=finished?(winner?'Vyhrál '+winner:'Zápas skončil'):'Na tahu '+(m.players[m.active]?.name||'');
-    const visits=(m.visits||[]).slice().reverse();
-    $('#live-visits').innerHTML=visits.length?visits.map(v=>visitRow(m,v)).join(''):'<p class="text-sm text-zinc-500">Zatím nepadla žádná šipka.</p>';
+    $('#live-title').textContent=matchup(m);
+    $('#live-progress').innerHTML=progressStrip(m);
+    paintPlayers(m);
+    $('#live-strip').innerHTML=(m.mode==='cricket'&&m.numbers.length?cricketCard(m):'')+(finished?'':throwStrip(m));
+    const box=$('#live-visits');
+    box.innerHTML=visitLog(m,finished);
+    box.scrollTop=box.scrollHeight;
   };
 
-  const paint=m=>{current=m;paintBanner(m);if(liveHero)paintHero(m);if(livePage)paintPage(m)};
+  let watchedLive=false,reloadQueued=false;
+  const paint=m=>{
+    current=m;paintBanner(m);if(livePage)paintPage(m);
+    if(!liveHero)return;
+    const finished=m?.status==='finished';
+    // Dohraný zápas už je v Posledních hrách, výsledek ukážeme jen při sledování konce
+    if(finished&&!watchedLive){paintHero(null);return}
+    if(m&&!finished)watchedLive=true;
+    paintHero(m);
+    if(finished&&!reloadQueued&&liveHero.hasAttribute('data-reload-on-finish')){reloadQueued=true;setTimeout(()=>location.reload(),6000)}
+  };
   const source=new EventSource(liveBanner.dataset.stream);
   source.onmessage=e=>{try{paint(JSON.parse(e.data).match||null)}catch{}};
   if(livePage){
     source.onopen=()=>paintBadge(current);
-    source.onerror=()=>{const badge=$('#live-badge');badge.className='chip bg-white/[.06] text-zinc-400';badge.textContent='Obnovuji spojení…'};
-    const fs=$('[data-live-fullscreen]');
-    if(fs&&livePage.requestFullscreen)fs.onclick=()=>document.fullscreenElement?document.exitFullscreen():livePage.requestFullscreen().catch(()=>{});
-    else if(fs)fs.hidden=true;
+    source.onerror=()=>{const badge=$('#live-badge');badge.className='inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-white/60 uppercase 2xl:text-xs';badge.textContent='Obnovuji spojení…'};
+    const fs=$('[data-live-fullscreen]'),page=document.documentElement;
+    if(fs&&page.requestFullscreen){
+      fs.onclick=()=>document.fullscreenElement?document.exitFullscreen():page.requestFullscreen().catch(()=>{});
+      document.addEventListener('fullscreenchange',()=>{
+        const on=!!document.fullscreenElement;
+        $('[data-live-fullscreen-label]',fs).textContent=on?'Ukončit':'Celá obrazovka';
+        fs.title=on?'Ukončit celou obrazovku':'Celá obrazovka';
+      });
+    }else if(fs)fs.hidden=true;
   }
 }

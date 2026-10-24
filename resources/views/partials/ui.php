@@ -34,7 +34,9 @@ if (!function_exists('dartiqo_icon')) {
             'clock' => 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 2',
             'check' => 'M5 12.5 10 17l9-10',
             'back' => 'M15 6l-6 6 6 6',
+            'trash' => 'M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3',
             'expand' => 'M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5',
+            'home' => 'M4 11l8-7 8 7 M6 9.5V20h4.5v-5.5h3V20H18V9.5',
         ];
     }
 

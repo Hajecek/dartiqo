@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(80) NOT NULL,
     -- Relativní cesta k souboru, např. uploads/avatars/ab12cd.webp
     avatar_path VARCHAR(255) NULL,
+    -- Monotónní verze profilu. Web i aplikace podle ní poznají realtime změnu.
+    profile_revision INT UNSIGNED NOT NULL DEFAULT 1,
 
     plan ENUM('free', 'pro') NOT NULL DEFAULT 'free',
     plan_interval ENUM('month', 'year') NULL,
@@ -72,4 +74,41 @@ CREATE TABLE IF NOT EXISTS live_matches (
     UNIQUE KEY live_matches_client_unique (user_id, client_id),
     KEY live_matches_recent_index (user_id, updated_at),
     CONSTRAINT live_matches_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Odehraný zápas z mobilní aplikace. Jeden řádek = jeden zápas jednoho účtu.
+-- Sloupce slouží k výpisům a filtrům, celý průběh je v JSON sloupci log.
+CREATE TABLE IF NOT EXISTS matches (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    -- Náhodné veřejné id do odkazů (96 bitů); interní id se ven neukazuje
+    public_id CHAR(24) NOT NULL,
+    -- Účet, ze kterého aplikace zápas nahrála
+    user_id BIGINT UNSIGNED NOT NULL,
+    -- UUID zápasu z aplikace; opakované nahrání zápas jen přepíše
+    client_id CHAR(36) NOT NULL,
+    status ENUM('finished', 'abandoned') NOT NULL,
+    mode ENUM('x01', 'cricket', 'aroundClock', 'countUp') NOT NULL,
+    title VARCHAR(160) NOT NULL,
+    player_count TINYINT UNSIGNED NOT NULL,
+    has_bot TINYINT(1) NOT NULL DEFAULT 0,
+    -- Sólo hra se nepočítá do výher a proher
+    is_solo TINYINT(1) NOT NULL DEFAULT 0,
+    -- Výsledek majitele účtu
+    result ENUM('won', 'lost', 'draw', 'none') NOT NULL DEFAULT 'none',
+    -- Tříšipkový průměr majitele (X01, Count Up)
+    average DECIMAL(6,2) NULL,
+    darts_thrown INT UNSIGNED NOT NULL DEFAULT 0,
+    play_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+    started_at DATETIME NOT NULL,
+    finished_at DATETIME NULL,
+    -- Celý zápas: pravidla, hráči se statistikami, legy, sety a každá návštěva šipku po šipce
+    log JSON NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY matches_public_unique (public_id),
+    UNIQUE KEY matches_client_unique (user_id, client_id),
+    KEY matches_user_recent_index (user_id, status, started_at),
+    CONSTRAINT matches_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

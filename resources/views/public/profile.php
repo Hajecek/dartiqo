@@ -2,18 +2,22 @@
 require_once __DIR__ . '/../partials/ui.php';
 
 $levelRing = 2 * M_PI * 44;
+/** @var \App\Services\MatchInsights $insights */
+$summary = $insights->summary();
 $stats = [
-    ['Průměr', '–', 'celkově'],
-    ['Výhry', '–', '0 z 0'],
-    ['Zápasy', '0', 'odehráno'],
-    ['Maximum 180', '0', 'celkem'],
+    ['Průměr', $summary['average'] === null ? '–' : number_format($summary['average'], 1, '.', ''), 'celkově'],
+    ['Výhry', $summary['played'] > 0 ? $summary['winRate'] . ' %' : '–', $summary['won'] . ' z ' . $summary['played']],
+    ['Zápasy', (string) $summary['matches'], 'odehráno'],
+    ['Maximum 180', (string) $summary['scores180'], 'celkem'],
 ];
 $locked = 'text-zinc-500 bg-white/[.04] ring-white/10';
+$open = 'text-accent bg-accent/10 ring-accent/30';
+$done = array_column($insights->milestones(), 1, 0);
 $badges = [
-    ['trophy', 'První výhra', $locked],
-    ['bolt', 'Maximum 180', $locked],
-    ['target', 'Zavření 100+', $locked],
-    ['flame', '7 dní v řadě', $locked],
+    ['trophy', 'První výhra', !empty($done['První výhra']) ? $open : $locked],
+    ['bolt', 'Maximum 180', !empty($done['Maximum 180']) ? $open : $locked],
+    ['target', 'Zavření 100+', !empty($done['Zavření 100+']) ? $open : $locked],
+    ['flame', '7 dní v řadě', !empty($done['7 dní v řadě']) ? $open : $locked],
 ];
 ?>
 <main class="@container/dash mx-auto w-full max-w-5xl" data-narrow>
@@ -72,25 +76,30 @@ $badges = [
 
 <form class="panel" id="profile-form">
 <h2>Údaje hráče</h2>
-<p class="mt-1 text-xs text-zinc-500">Změny zůstanou v tomhle prohlížeči, jen pro tuhle ukázku.</p>
+<p class="mt-1 text-xs text-zinc-500">Uloží se na účet a hned se propsají i do aplikace.</p>
 <div class="mt-6 grid gap-4 sm:grid-cols-2">
 <div>
 <label for="profile-first">Jméno</label>
-<input id="profile-first" type="text" value="Alex" required autocomplete="given-name">
+<input id="profile-first" type="text" value="Alex" required autocomplete="given-name" maxlength="80">
 </div>
 <div>
 <label for="profile-last">Příjmení</label>
-<input id="profile-last" type="text" value="Novák" required autocomplete="family-name">
+<input id="profile-last" type="text" value="Novák" required autocomplete="family-name" maxlength="80">
 </div>
 <div class="sm:col-span-2">
 <label for="profile-user">Uživatelské jméno</label>
 <div class="relative">
 <span class="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-sm text-zinc-500">@</span>
-<input class="pl-9!" id="profile-user" type="text" value="alex180" required pattern="[a-zA-Z0-9_]{3,24}" autocomplete="username">
+<input class="pl-9!" id="profile-user" type="text" value="alex180" required pattern="[a-zA-Z0-9_]{3,24}" autocomplete="username" maxlength="24">
 </div>
 <small class="mt-2 block text-[11px] text-zinc-500">3–24 znaků: písmena, čísla a podtržítko.</small>
 </div>
+<div class="sm:col-span-2">
+<label for="profile-email">E-mail</label>
+<input id="profile-email" type="email" value="" required autocomplete="email" maxlength="191">
 </div>
+</div>
+<p id="profile-status" class="mt-4 hidden text-xs text-rose-300" role="status"></p>
 <div class="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/[.06] pt-5">
 <a class="text-xs text-zinc-500 hover:text-zinc-300" href="<?= e(url('/app/settings')) ?>">Další nastavení účtu</a>
 <button class="btn-primary" type="submit"><?= dartiqo_i('check') ?>Uložit změny</button>

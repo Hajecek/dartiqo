@@ -6,6 +6,7 @@ namespace App\Controllers\Api;
 
 use App\Core\Request;
 use App\Repositories\UserRepository;
+use App\Services\ProfileService;
 
 final class AuthController extends ApiController
 {
@@ -61,5 +62,85 @@ final class AuthController extends ApiController
     public function me(Request $request, array $params = []): void
     {
         $this->json(['ok' => true, 'user' => UserRepository::toPublic($this->requireUser($request))]);
+    }
+
+    /** @param array<string, string> $params */
+    public function update(Request $request, array $params = []): void
+    {
+        $user = $this->requireUser($request);
+        $body = $request->all();
+        $input = [];
+        foreach (['first', 'last', 'username', 'email'] as $key) {
+            if (array_key_exists($key, $body) && $body[$key] !== null) {
+                $input[$key] = (string) $body[$key];
+            }
+        }
+        if (array_key_exists('photo', $body)) {
+            $input['photo'] = $body['photo'];
+        }
+
+        $result = (new ProfileService(new UserRepository(db())))->update($user, $input);
+        if (!$result['ok']) {
+            $payload = ['ok' => false];
+            if (isset($result['errors'])) {
+                $payload['errors'] = $result['errors'];
+            }
+            if (isset($result['message'])) {
+                $payload['message'] = $result['message'];
+            }
+            $this->json($payload, $result['status']);
+        }
+
+        $this->json(['ok' => true, 'user' => $result['user']]);
+    }
+
+    /**
+     * SSE pro aplikaci: Authorization Bearer. EventSource v prohlížeči používá cookie endpoint.
+     *
+     * @param array<string, string> $params
+     */
+    public function stream(Request $request, array $params = []): void
+    {
+        $user = $this->requireUser($request);
+        set_time_limit(40);
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: text/event-stream; charset=utf-8');
+        header('Cache-Control: no-store');
+        header('X-Accel-Buffering: no');
+
+        $users = new UserRepository(db());
+        $lastRevision = $request->header('Last-Event-ID');
+        $deadline = time() + 25;
+        $lastWrite = time();
+        echo "retry: 1500\n\n";
+        flush();
+
+        while (time() < $deadline && !connection_aborted()) {
+            $fresh = $users->findById((int) $user['id']);
+            if ($fresh === null) {
+                echo "event: gone\ndata: {}\n\n";
+                flush();
+                exit;
+            }
+            $revision = (string) (int) ($fresh['profile_revision'] ?? 1);
+            if ($revision !== $lastRevision) {
+                echo 'id: ' . $revision . "\n";
+                echo 'data: ' . json_encode(
+                    ['user' => UserRepository::toPublic($fresh)],
+                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
+                ) . "\n\n";
+                $lastRevision = $revision;
+                $lastWrite = time();
+                flush();
+            } elseif (time() - $lastWrite >= 10) {
+                echo ": ping\n\n";
+                $lastWrite = time();
+                flush();
+            }
+            usleep(800_000);
+        }
+        exit;
     }
 }
