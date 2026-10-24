@@ -44,8 +44,6 @@ final class PushService
         }
         $account = $this->firebaseAccount();
         if ($account === null) {
-            error_log('Dartiqo push: chybí Firebase účet služby (storage/firebase/dartiqo-firebase-adminsdk.json)');
-
             return;
         }
         $accessToken = $this->accessToken($account);
@@ -66,12 +64,21 @@ final class PushService
         } elseif ($path[0] !== '/') {
             $path = dirname(__DIR__, 2) . '/' . ltrim($path, '/');
         }
+        if (!is_file($path)) {
+            error_log('Dartiqo push: chybí Firebase účet služby (' . $path . ')');
+
+            return null;
+        }
         if (!is_readable($path)) {
+            error_log('Dartiqo push: Firebase účet služby nejde přečíst (' . $path . ')');
+
             return null;
         }
         try {
             $data = json_decode((string) file_get_contents($path), true, 8, JSON_THROW_ON_ERROR);
         } catch (\Throwable) {
+            error_log('Dartiqo push: Firebase účet služby nejde načíst (' . $path . ')');
+
             return null;
         }
         if (!is_array($data)) {

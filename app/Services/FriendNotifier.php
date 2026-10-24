@@ -61,8 +61,8 @@ final class FriendNotifier
         }
         $this->push->send(
             $otherId,
-            'Nová žádost',
-            $this->name($actor) . ' ti posílá žádost o přátelství.',
+            '👋 Nová žádost o přátelství',
+            $this->name($actor) . ' ti posílá žádost o přátelství. 🎯',
             'friend.request'
         );
     }
