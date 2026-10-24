@@ -61,13 +61,20 @@ final class FriendDossier
      */
     private function collect(int $viewerId, array $friends, bool $withGames): array
     {
-        $careers = $this->careers(array_keys($friends));
-        $series = $this->series($viewerId, $friends);
+        $hidden = array_fill_keys($this->hiddenIds(array_keys($friends)), true);
+        $visible = array_diff_key($friends, $hidden);
+        $careers = $this->careers(array_keys($visible));
+        $series = $this->series($viewerId, $visible);
         $out = [];
         foreach ($friends as $id => $username) {
+            if (isset($hidden[$id])) {
+                $out[$id] = self::hiddenRecord();
+                continue;
+            }
             $career = $careers[$id] ?? self::emptyCareer();
             $mutual = $series[$id] ?? null;
             $summary = [
+                'private' => false,
                 'career' => $career,
                 'mutual' => [
                     'wins' => $mutual['wins'] ?? 0,
@@ -76,6 +83,7 @@ final class FriendDossier
                 ],
             ];
             $out[$id] = [
+                'private' => false,
                 'summary' => $summary,
                 'career' => $career,
                 'mutual' => $summary['mutual'],
@@ -193,11 +201,20 @@ final class FriendDossier
                 $wins += $game['result'] === 'win' ? 1 : 0;
                 $losses += $game['result'] === 'loss' ? 1 : 0;
                 $draws += $game['result'] === 'draw' ? 1 : 0;
-                $myPoints += $game['myPoints'];
-                $myDarts += $game['myDarts'];
-                $theirPoints += $game['theirPoints'];
-                $theirDarts += $game['theirDarts'];
-                unset($games[$index]['myPoints'], $games[$index]['myDarts'], $games[$index]['theirPoints'], $games[$index]['theirDarts'], $games[$index]['at']);
+                if ($game['scored']) {
+                    $myPoints += $game['myPoints'];
+                    $myDarts += $game['myDarts'];
+                    $theirPoints += $game['theirPoints'];
+                    $theirDarts += $game['theirDarts'];
+                }
+                unset(
+                    $games[$index]['myPoints'],
+                    $games[$index]['myDarts'],
+                    $games[$index]['theirPoints'],
+                    $games[$index]['theirDarts'],
+                    $games[$index]['scored'],
+                    $games[$index]['at']
+                );
             }
             $out[$friendId] = [
                 'wins' => $wins,
@@ -292,6 +309,7 @@ final class FriendDossier
             'mine' => $mine,
             'myAverage' => self::statAverage($myStats, $mode),
             'theirAverage' => self::statAverage($theirStats, $mode),
+            'scored' => in_array($mode, ['x01', 'countUp'], true),
             'myPoints' => (int) ($myStats['points'] ?? 0),
             'myDarts' => (int) ($myStats['darts'] ?? 0),
             'theirPoints' => (int) ($theirStats['points'] ?? 0),
@@ -392,6 +410,47 @@ final class FriendDossier
         return 'Je to vyrovnané.';
     }
 
+    /**
+     * Soukromý účet: kamarád nedostane kariéru, průměry ani vzájemné zápasy.
+     *
+     * @return array<string, mixed>
+     */
+    private static function hiddenRecord(): array
+    {
+        $summary = self::emptySummary();
+        $summary['private'] = true;
+
+        return [
+            'private' => true,
+            'summary' => $summary,
+            'career' => $summary['career'],
+            'mutual' => $summary['mutual'],
+            'myAverage' => null,
+            'theirAverage' => null,
+            'standing' => 'Soukromý účet. Statistiky nejsou vidět.',
+            'games' => [],
+        ];
+    }
+
+    /**
+     * @param list<int> $ids
+     * @return list<int>
+     */
+    private function hiddenIds(array $ids): array
+    {
+        $ids = array_values(array_filter(array_map(intval(...), $ids), static fn (int $id): bool => $id > 0));
+        if ($ids === []) {
+            return [];
+        }
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $rows = $this->db->fetchAll(
+            "SELECT id FROM users WHERE visibility = 'private' AND id IN ({$placeholders})",
+            $ids
+        );
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+    }
+
     /** @return array{played: int, wins: int, losses: int, draws: int, average: null} */
     private static function emptyCareer(): array
     {
@@ -402,6 +461,7 @@ final class FriendDossier
     private static function emptySummary(): array
     {
         return [
+            'private' => false,
             'career' => self::emptyCareer(),
             'mutual' => ['wins' => 0, 'losses' => 0, 'draws' => 0],
         ];

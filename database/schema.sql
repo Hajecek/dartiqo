@@ -3,6 +3,8 @@ USE dartiqo;
 
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    -- Náhodné veřejné id do odkazů (96 bitů); interní id se ven neukazuje
+    public_id CHAR(24) NOT NULL,
     -- Kolace *_ci zajistí, že "Petr" a "petr" jsou stejné username/e-mail
     username VARCHAR(30) NOT NULL,
     email VARCHAR(191) NOT NULL,
@@ -21,6 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
 
     role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
     status ENUM('active', 'blocked') NOT NULL DEFAULT 'active',
+    -- public = kamarádi vidí statistiky, private = kamarádům se neukáže nic ze hry
+    visibility ENUM('public', 'private') NOT NULL DEFAULT 'public',
     email_verified_at DATETIME NULL,
 
     -- SHA-256 tokenu pro zapomenuté heslo; samotný token jde jen e-mailem
@@ -35,6 +39,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
+    UNIQUE KEY users_public_unique (public_id),
     UNIQUE KEY users_username_unique (username),
     UNIQUE KEY users_email_unique (email),
     UNIQUE KEY users_reset_token_unique (reset_token_hash)

@@ -39,7 +39,14 @@ $badges = [
 <svg class="absolute -top-16 -right-10 size-72 text-accent/20" viewBox="0 0 100 100" fill="none" stroke="currentColor"><circle cx="50" cy="50" r="48"/><circle cx="50" cy="50" r="36"/><circle cx="50" cy="50" r="24"/><circle cx="50" cy="50" r="12"/><circle cx="50" cy="50" r="3" fill="currentColor"/></svg>
 </div>
 <div class="relative flex flex-col gap-5 px-5 pb-6 sm:flex-row sm:items-end sm:px-8 sm:pb-8">
-<span class="-mt-14 grid size-28 shrink-0 place-items-center overflow-hidden rounded-[28px] bg-accent text-4xl font-bold text-black shadow-[0_18px_40px_-14px_#faff00aa] ring-[6px] ring-zinc-900 [&_img]:size-full [&_img]:object-cover" data-player-avatar>A</span>
+<div class="relative -mt-14 size-28 shrink-0">
+<span class="grid size-full place-items-center overflow-hidden rounded-[28px] bg-accent text-4xl font-bold text-black shadow-[0_18px_40px_-14px_#faff00aa] ring-[6px] ring-zinc-900 [&_img]:size-full [&_img]:object-cover" data-player-avatar>A</span>
+<label class="absolute right-0 bottom-0 grid size-9 cursor-pointer place-items-center rounded-full bg-accent text-black ring-2 ring-zinc-900" title="Změnit profilovou fotku">
+<?= dartiqo_i('pencil', 'size-4') ?>
+<span class="sr-only">Změnit profilovou fotku</span>
+<input class="hidden" type="file" accept="image/*" id="profile-photo">
+</label>
+</div>
 <div class="min-w-0 flex-1">
 <strong class="block truncate text-2xl font-semibold tracking-tight" data-player-full>Alex Novák</strong>
 <span class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-zinc-400"><span data-player-user>@alex180</span></span>
@@ -61,12 +68,6 @@ $badges = [
 
 <div class="mt-4 grid items-start gap-4 @3xl/dash:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)]">
 <div class="flex flex-col gap-4">
-<section class="panel text-center" aria-labelledby="photo-title">
-<h2 class="text-left" id="photo-title">Profilová fotka</h2>
-<p class="mt-1 text-left text-xs text-zinc-500">Čtvercový obrázek do 5 MB.</p>
-<div class="relative mx-auto mt-6 size-32 touch-none overflow-hidden rounded-[32px] bg-white/[.04] ring-1 ring-white/10 ring-inset [&_img]:pointer-events-none [&_img]:size-full [&_img]:object-cover [&_img]:select-none [&_span]:flex [&_span]:h-full [&_span]:items-center [&_span]:justify-center [&_span]:text-5xl [&_span]:font-bold [&_span]:text-accent" id="profile-avatar"><span>A</span></div>
-<label class="btn-ghost mt-5 mb-0! w-full cursor-pointer text-zinc-100!"><?= dartiqo_i('camera') ?>Změnit fotografii<input class="hidden" type="file" accept="image/*" id="profile-photo"></label>
-</section>
 <section class="panel" aria-labelledby="badges-title">
 <h2 id="badges-title">Odznaky</h2>
 <div class="mt-4 grid grid-cols-2 gap-2">

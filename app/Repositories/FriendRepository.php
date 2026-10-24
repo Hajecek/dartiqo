@@ -45,15 +45,19 @@ final class FriendRepository
         if ($friendshipId <= 0) {
             throw new InvalidArgumentException('Kamarád neexistuje.');
         }
-        foreach ($this->rows($userId, $friendshipId) as $row) {
-            if ($row['status'] !== 'accepted') {
-                throw new InvalidArgumentException('Kamarádi ještě nejste.');
-            }
 
-            return $this->present($row);
+        return $this->acceptedRow($this->rows($userId, $friendshipId));
+    }
+
+    /** Stejné jako accepted(), ale v odkazu je veřejné id kamaráda, ne id přátelství. */
+    public function acceptedByPublicId(int $userId, string $publicId): array
+    {
+        $publicId = strtolower($publicId);
+        if (!preg_match('/^[0-9a-f]{24}$/', $publicId)) {
+            throw new InvalidArgumentException('Kamarád neexistuje.');
         }
 
-        throw new InvalidArgumentException('Kamarád neexistuje.');
+        return $this->acceptedRow($this->rows($userId, null, $publicId));
     }
 
     /**
@@ -224,10 +228,10 @@ final class FriendRepository
     /**
      * @return list<array<string, mixed>>
      */
-    private function rows(int $userId, ?int $id = null): array
+    private function rows(int $userId, ?int $id = null, ?string $publicId = null): array
     {
         $sql = 'SELECT f.id, f.user_low, f.user_high, f.requester_id, f.status,
-                       u.id AS other_id, u.username, u.first_name, u.last_name, u.avatar_path, u.profile_revision
+                       u.id AS other_id, u.public_id, u.username, u.first_name, u.last_name, u.avatar_path, u.profile_revision, u.visibility
                 FROM friendships f
                 JOIN users u ON u.id = IF(f.user_low = ?, f.user_high, f.user_low)
                 WHERE (f.user_low = ? OR f.user_high = ?) AND u.status = \'active\'';
@@ -235,6 +239,10 @@ final class FriendRepository
         if ($id !== null) {
             $sql .= ' AND f.id = ?';
             $params[] = $id;
+        }
+        if ($publicId !== null) {
+            $sql .= ' AND u.public_id = ?';
+            $params[] = $publicId;
         }
         $sql .= ' ORDER BY f.updated_at DESC, u.username';
 
@@ -244,18 +252,36 @@ final class FriendRepository
     /** @param array<string, mixed> $row @return array<string, mixed> */
     private function present(array $row): array
     {
+        $user = UserRepository::toDirectory([
+            'id' => $row['other_id'],
+            'public_id' => $row['public_id'],
+            'username' => $row['username'],
+            'first_name' => $row['first_name'],
+            'last_name' => $row['last_name'],
+            'avatar_path' => $row['avatar_path'],
+            'profile_revision' => $row['profile_revision'],
+        ]);
+        $user['private'] = (string) ($row['visibility'] ?? 'public') === 'private';
+
         return [
             'id' => (int) $row['id'],
             'status' => (string) $row['status'],
-            'user' => UserRepository::toDirectory([
-                'id' => $row['other_id'],
-                'username' => $row['username'],
-                'first_name' => $row['first_name'],
-                'last_name' => $row['last_name'],
-                'avatar_path' => $row['avatar_path'],
-                'profile_revision' => $row['profile_revision'],
-            ]),
+            'user' => $user,
         ];
+    }
+
+    /** @param list<array<string, mixed>> $rows @return array<string, mixed> */
+    private function acceptedRow(array $rows): array
+    {
+        foreach ($rows as $row) {
+            if ($row['status'] !== 'accepted') {
+                throw new InvalidArgumentException('Kamarádi ještě nejste.');
+            }
+
+            return $this->present($row);
+        }
+
+        throw new InvalidArgumentException('Kamarád neexistuje.');
     }
 
     private static function relation(int $userId, int $requesterId, string $status): string

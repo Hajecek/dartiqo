@@ -2,9 +2,9 @@
 require_once __DIR__ . '/../partials/ui.php';
 
 /** @var array{friends: list<array<string, mixed>>, incoming: list<array<string, mixed>>, outgoing: list<array<string, mixed>>} $book */
-/** @var list<array<string, mixed>> $people */
 $folder = ($folder ?? 'friends') === 'requests' ? 'requests' : 'friends';
 $query = (string) ($query ?? '');
+$openFind = (bool) ($openFind ?? false);
 $flash = $flash ?? null;
 $incomingCount = count($book['incoming']);
 
@@ -40,99 +40,28 @@ $csrf = auth()->csrfToken();
 </header>
 
 <nav class="seg mb-6" aria-label="Složky">
-<a class="<?= $folder === 'friends' ? 'active' : '' ?>" href="<?= e(url('/app/friends?folder=friends' . ($query !== '' ? '&q=' . rawurlencode($query) : ''))) ?>">Kamarádi</a>
+<a class="<?= $folder === 'friends' ? 'active' : '' ?>" href="<?= e(url('/app/friends?folder=friends')) ?>">Kamarádi</a>
 <a class="<?= $folder === 'requests' ? 'active' : '' ?>" href="<?= e(url('/app/friends?folder=requests')) ?>">Žádosti<?php if ($incomingCount > 0): ?><span class="grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-black"><?= $incomingCount ?></span><?php endif; ?></a>
 </nav>
 
-<?php if (is_string($flash) && $flash !== ''): ?>
+<?php if (is_string($flash) && $flash !== '' && !$openFind): ?>
 <p class="mb-4 rounded-2xl bg-accent/10 px-4 py-3 text-sm text-accent" role="status"><?= e($flash) ?></p>
 <?php endif; ?>
 
+<button class="mb-6 flex h-12 w-full items-center gap-3 rounded-full bg-white/[.04] px-4 text-left text-sm text-zinc-400 ring-1 ring-white/10 ring-inset transition hover:bg-white/[.07] hover:text-zinc-200" type="button" data-sheet="sheet-find-player" data-open-find>
+<?= dartiqo_i('search', 'size-4 shrink-0') ?>
+<span>Najít hráče</span>
+</button>
+
 <?php if ($folder === 'friends'): ?>
-<form class="panel mb-4" method="get" action="<?= e(url('/app/friends')) ?>">
-<input type="hidden" name="folder" value="friends">
-<label for="friend-query">Najít hráče</label>
-<div class="flex flex-col gap-3 sm:flex-row">
-<div class="relative min-w-0 flex-1">
-<?= dartiqo_i('search', 'pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-zinc-500') ?>
-<input class="h-11! rounded-full! pl-11!" id="friend-query" name="q" type="search" value="<?= e($query) ?>" placeholder="Jméno, username nebo e-mail" autocomplete="off">
-</div>
-<button class="btn-primary shrink-0" type="submit">Hledat</button>
-</div>
-</form>
-
-<?php if ($query !== ''): ?>
-<section class="panel mb-4" aria-labelledby="search-title">
-<h2 id="search-title">Výsledky</h2>
-<?php if ($people === []): ?>
-<p class="mt-4 text-sm text-zinc-500">Nikdo takový v Dartiqo není.</p>
-<?php else: ?>
-<ul class="mt-4 flex flex-col gap-3">
-<?php foreach ($people as $hit): ?>
-<?php $relation = (string) ($hit['relation'] ?? 'none'); ?>
-<li class="flex items-center gap-3">
-<?php $person($hit); ?>
-<?php if ($relation === 'accepted'): ?>
-<span class="text-xs font-semibold text-zinc-400">Kamarádi</span>
-<?php elseif ($relation === 'outgoing'): ?>
-<span class="text-xs font-semibold text-zinc-400">Odesláno</span>
-<?php else: ?>
-<form method="post" action="<?= e(url('/app/friends')) ?>">
-<input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
-<input type="hidden" name="userId" value="<?= (int) $hit['id'] ?>">
-<input type="hidden" name="q" value="<?= e($query) ?>">
-<button class="btn-primary h-9! px-4! text-xs!" type="submit"><?= $relation === 'incoming' ? 'Přijmout' : 'Žádost' ?></button>
-</form>
-<?php endif; ?>
-</li>
-<?php endforeach; ?>
-</ul>
-<?php endif; ?>
-</section>
-<?php endif; ?>
-
 <section class="panel" aria-labelledby="friends-title">
 <h2 id="friends-title">Přijatí</h2>
 <?php if ($book['friends'] === []): ?>
-<p class="mt-4 text-sm text-zinc-500">Zatím tu nikdo není. Najdi hráče a pošli mu žádost.</p>
+<p class="mt-4 text-sm text-zinc-500" id="friends-empty">Zatím tu nikdo není. Najdi hráče a pošli mu žádost.</p>
 <?php else: ?>
-<ul class="mt-4 flex flex-col gap-2">
+<ul class="mt-4 flex flex-col gap-2" id="friends-list">
 <?php foreach ($book['friends'] as $link): ?>
-<?php
-    $summary = $link['summary'] ?? ['career' => ['played' => 0, 'average' => null], 'mutual' => ['wins' => 0, 'losses' => 0, 'draws' => 0]];
-    $mutual = $summary['mutual'];
-    $playedTogether = (int) $mutual['wins'] + (int) $mutual['losses'] + (int) $mutual['draws'];
-    $career = $summary['career'];
-    $friendName = trim((string) $link['user']['first'] . ' ' . (string) $link['user']['last']);
-    if ($friendName === '') {
-        $friendName = (string) $link['user']['username'];
-    }
-    $hint = '@' . $link['user']['username'];
-    if ($career['average'] !== null) {
-        $hint .= ' · průměr ' . number_format((float) $career['average'], 1, '.', '');
-    } elseif ((int) $career['played'] > 0) {
-        $hint .= ' · ' . (int) $career['played'] . ' zápasů';
-    }
-?>
-<li class="flex items-center gap-2 rounded-2xl py-1">
-<a class="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-1 hover:bg-white/[.04]" href="<?= e(url('/app/friends/' . (int) $link['id'])) ?>">
-<?php $avatar($link['user']); ?>
-<span class="min-w-0 flex-1">
-<strong class="block truncate text-sm"><?= e($friendName) ?></strong>
-<span class="mt-0.5 block truncate text-xs text-zinc-500"><?= e($hint) ?></span>
-</span>
-<?php if ($playedTogether > 0): ?>
-<span class="shrink-0 text-right">
-<span class="num block text-xl leading-none"><?= (int) $mutual['wins'] ?> <span class="text-zinc-600">:</span> <?= (int) $mutual['losses'] ?></span>
-<small class="mt-1 block text-[10px] font-semibold tracking-wide text-zinc-500 uppercase">Vzájemně</small>
-</span>
-<?php endif; ?>
-</a>
-<form method="post" action="<?= e(url('/app/friends/' . (int) $link['id'] . '/delete')) ?>">
-<input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
-<button class="pill text-rose-300!" type="submit">Odebrat</button>
-</form>
-</li>
+<?php require __DIR__ . '/../partials/friend-accepted.php'; ?>
 <?php endforeach; ?>
 </ul>
 <?php endif; ?>
@@ -185,4 +114,6 @@ $csrf = auth()->csrfToken();
 <?php endif; ?>
 </section>
 <?php endif; ?>
+<?php require __DIR__ . '/../partials/friend-find.php'; ?>
+<?php require __DIR__ . '/../partials/friend-remove.php'; ?>
 </main>

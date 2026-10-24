@@ -2,15 +2,35 @@
 require_once __DIR__ . '/../partials/ui.php';
 
 $rowIcon = static fn (string $icon, string $tone = 'bg-white/[.05] text-zinc-300 ring-white/10'): string => '<span class="grid size-10 shrink-0 place-items-center rounded-xl ring-1 ring-inset ' . $tone . '">' . dartiqo_i($icon, 'size-[18px]') . '</span>';
+$account = auth()->user();
+$accountPublic = is_array($account) && (string) ($account['visibility'] ?? 'public') !== 'private';
+$visibilityCopy = $accountPublic
+    ? 'Kamarádi uvidí tvoje statistiky, průměry i vzájemné zápasy.'
+    : 'Kamarádi uvidí jen jméno a fotku. Průměry, zápasy ani vzájemná bilance se jim neukážou.';
 ?>
 <main class="mx-auto w-full max-w-3xl" data-narrow>
 <header class="mb-8">
 <p class="eyebrow">Účet</p>
 <h1 class="mt-2">Nastavení</h1>
-<p class="mt-1 text-sm text-zinc-400">Vzhled, upozornění a propojené účty na jednom místě.</p>
+<p class="mt-1 text-sm text-zinc-400">Soukromí, vzhled a upozornění na jednom místě.</p>
 </header>
 
 <form class="flex flex-col gap-4" id="profile-form">
+<section class="panel" aria-labelledby="privacy-title">
+<p class="eyebrow" id="privacy-title">Soukromí</p>
+<div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+<?= $rowIcon('lock') ?>
+<div class="min-w-0 flex-1">
+<strong class="block text-sm font-semibold">Soukromý, nebo veřejný účet</strong>
+<p class="text-xs text-zinc-500" id="visibility-copy"><?= e($visibilityCopy) ?></p>
+</div>
+<div class="seg shrink-0" id="account-visibility" role="group" aria-label="Viditelnost účtu" data-value="<?= $accountPublic ? 'public' : 'private' ?>">
+<button type="button" data-visibility="private" class="<?= $accountPublic ? '' : 'active' ?>" aria-pressed="<?= $accountPublic ? 'false' : 'true' ?>">Soukromý</button>
+<button type="button" data-visibility="public" class="<?= $accountPublic ? 'active' : '' ?>" aria-pressed="<?= $accountPublic ? 'true' : 'false' ?>">Veřejný</button>
+</div>
+</div>
+</section>
+
 <section class="panel" aria-labelledby="look-title">
 <p class="eyebrow">Vzhled</p>
 <h2 class="sr-only" id="look-title">Vzhled</h2>
@@ -69,7 +89,7 @@ $rowIcon = static fn (string $icon, string $tone = 'bg-white/[.05] text-zinc-300
 </section>
 
 <div class="sticky bottom-24 z-10 flex items-center justify-between gap-3 rounded-full border border-white/[.08] bg-zinc-900/85 py-2 pr-2 pl-5 shadow-[0_20px_40px_-20px_#000] backdrop-blur-xl lg:bottom-6">
-<span class="text-xs text-zinc-400">Změny se uloží jen pro tuto relaci.</span>
+<span class="text-xs text-zinc-400">Viditelnost účtu se ukládá hned. Ostatní změny jen pro tuto relaci.</span>
 <button class="btn-primary h-10" type="submit"><?= dartiqo_i('check') ?>Uložit změny</button>
 </div>
 </form>

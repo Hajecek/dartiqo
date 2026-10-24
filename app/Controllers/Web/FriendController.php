@@ -25,11 +25,6 @@ final class FriendController
             $folder = $book['incoming'] !== [] ? 'requests' : 'friends';
         }
         $query = trim($request->input('q'));
-        $people = $query === '' ? [] : (new UserRepository(db()))->searchDirectory($query, (int) $user['id']);
-        $relations = $repo->relations((int) $user['id'], array_column($people, 'id'));
-        foreach ($people as $index => $person) {
-            $people[$index]['relation'] = $relations[(int) $person['id']] ?? 'none';
-        }
 
         View::render('public.app-friends', [
             'title' => 'Kamarádi | Dartiqo',
@@ -37,9 +32,36 @@ final class FriendController
             'book' => $book,
             'folder' => $folder,
             'query' => $query,
-            'people' => $people,
+            'openFind' => $request->input('find') === '1',
             'flash' => $this->pullFlash(),
         ], 'layouts.app');
+    }
+
+    /** Živý seznam pro pole Najít hráče. Bez dotazu vrací návrhy. @param array<string, string> $params */
+    public function lookup(Request $request, array $params = []): void
+    {
+        $user = auth()->user();
+        if ($user === null) {
+            $this->json(['ok' => false, 'message' => 'Přihlas se znovu.'], 401);
+        }
+
+        $query = trim($request->input('q'));
+        $found = $this->directory((int) $user['id'], $query);
+        $short = !$found['searching'] && $query !== '';
+        $this->json([
+            'ok' => true,
+            'searching' => $found['searching'],
+            'label' => $found['searching'] ? 'Výsledky' : 'Návrhy',
+            'hint' => $found['searching']
+                ? 'Shoda se jménem, username nebo e-mailem.'
+                : ($short ? 'Ještě jeden znak a seznam se zúží.' : 'Nejnovější hráči. Stačí začít psát.'),
+            'html' => View::partial('partials.friend-people', [
+                'people' => $found['people'],
+                'query' => $found['searching'] ? $query : '',
+                'searching' => $found['searching'],
+                'csrf' => auth()->csrfToken(),
+            ]),
+        ]);
     }
 
     /** @param array<string, string> $params */
@@ -47,7 +69,7 @@ final class FriendController
     {
         $user = $this->requireUser();
         try {
-            $friend = (new FriendRepository(db()))->accepted((int) $user['id'], (int) ($params['id'] ?? 0));
+            $friend = (new FriendRepository(db()))->acceptedByPublicId((int) $user['id'], (string) ($params['publicId'] ?? ''));
         } catch (InvalidArgumentException $e) {
             $this->flash($e->getMessage());
             $this->back('friends');
@@ -67,17 +89,39 @@ final class FriendController
     public function store(Request $request, array $params = []): void
     {
         $user = $this->requireUser();
-        $this->requireCsrf($request);
+        $json = $this->wantsJson($request);
+        $token = $request->header('X-CSRF-Token') ?: $request->input('_csrf');
+        if (!auth()->verifyCsrf($token)) {
+            if ($json) {
+                $this->json(['ok' => false, 'message' => 'Platnost formuláře vypršela. Obnov stránku a zkus to znovu.'], 419);
+            }
+            $this->flash('Platnost formuláře vypršela. Obnov stránku a zkus to znovu.');
+            $this->back('friends', $request->input('q'), true);
+        }
         $otherId = (int) $request->input('userId');
         try {
             $result = (new FriendRepository(db()))->request((int) $user['id'], $otherId);
-            $this->flash($result['relation'] === 'accepted'
+            $message = $result['relation'] === 'accepted'
                 ? 'Je z vás kamarádi.'
-                : 'Žádost je odeslaná. Kamarádem bude, až ji přijme.');
+                : 'Žádost je odeslaná. Kamarádem bude, až ji přijme.';
+            if ($json) {
+                $this->json([
+                    'ok' => true,
+                    'relation' => $result['relation'],
+                    'message' => $message,
+                    'friendHtml' => $result['relation'] === 'accepted'
+                        ? View::partial('partials.friend-accepted', ['link' => $result['friendship']])
+                        : '',
+                ]);
+            }
+            $this->flash($message);
         } catch (InvalidArgumentException $e) {
+            if ($json) {
+                $this->json(['ok' => false, 'message' => $e->getMessage()], 422);
+            }
             $this->flash($e->getMessage());
         }
-        $this->back('friends', $request->input('q'));
+        $this->back('friends', $request->input('q'), true);
     }
 
     /** @param array<string, string> $params */
@@ -125,6 +169,40 @@ final class FriendController
         $this->back($folder);
     }
 
+    /**
+     * @return array{searching: bool, people: list<array<string, mixed>>}
+     */
+    private function directory(int $userId, string $query): array
+    {
+        $users = new UserRepository(db());
+        $people = $users->directory($query, $userId);
+        $relations = (new FriendRepository(db()))->relations($userId, array_column($people, 'id'));
+        foreach ($people as $index => $person) {
+            $people[$index]['relation'] = $relations[(int) $person['id']] ?? 'none';
+        }
+
+        return [
+            'searching' => $users->isDirectorySearch($query),
+            'people' => $people,
+        ];
+    }
+
+    private function wantsJson(Request $request): bool
+    {
+        return str_contains($request->header('Accept'), 'application/json')
+            || $request->header('X-Requested-With') === 'fetch';
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function json(array $payload, int $status = 200): never
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        exit;
+    }
+
     /** @return array<string, mixed> */
     private function requireUser(): array
     {
@@ -160,13 +238,16 @@ final class FriendController
         return is_string($message) && $message !== '' ? $message : null;
     }
 
-    private function back(string $folder, string $query = ''): never
+    private function back(string $folder, string $query = '', bool $find = false): never
     {
         $folder = $folder === 'requests' ? 'requests' : 'friends';
         $target = '/app/friends?folder=' . $folder;
         $query = trim($query);
         if ($query !== '') {
             $target .= '&q=' . rawurlencode($query);
+        }
+        if ($find) {
+            $target .= '&find=1';
         }
         app()->redirect($target);
     }

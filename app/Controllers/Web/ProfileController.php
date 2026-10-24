@@ -57,6 +57,33 @@ final class ProfileController
         $this->json(['ok' => true, 'user' => $result['user'], 'csrf' => auth()->csrfToken()]);
     }
 
+    /** Soukromý účet schová kamarádům statistiky. Veřejný je nechá viditelné. @param array<string, string> $params */
+    public function visibility(Request $request, array $params = []): void
+    {
+        $this->requireCsrf($request);
+        $user = auth()->user();
+        if ($user === null) {
+            $this->json(['ok' => false, 'message' => 'Nejsi přihlášený.'], 401);
+        }
+
+        $visibility = $request->input('visibility');
+        if ($visibility !== 'public' && $visibility !== 'private') {
+            $this->json(['ok' => false, 'message' => 'Vyber veřejný, nebo soukromý účet.'], 422);
+        }
+
+        $users = new UserRepository(db());
+        if ((string) ($user['visibility'] ?? 'public') !== $visibility) {
+            $users->setVisibility((int) $user['id'], $visibility);
+            auth()->refreshUser();
+        }
+        $fresh = $users->findById((int) $user['id']);
+        if ($fresh === null) {
+            $this->json(['ok' => false, 'message' => 'Účet se nepodařilo načíst.'], 500);
+        }
+
+        $this->json(['ok' => true, 'user' => UserRepository::toPublic($fresh), 'csrf' => auth()->csrfToken()]);
+    }
+
     /**
      * SSE: web dostane nový profil hned po změně z aplikace (nebo jiného okna).
      *

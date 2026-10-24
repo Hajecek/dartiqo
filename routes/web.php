@@ -40,7 +40,8 @@ $router->get('/app/live', [PageController::class, 'live']);
 $router->get('/app/live/stream', [LiveController::class, 'stream']);
 $router->get('/app/profile', [PageController::class, 'profile']);
 $router->get('/app/friends', [WebFriendController::class, 'index']);
-$router->get('/app/friends/{id}', [WebFriendController::class, 'show']);
+$router->get('/app/friends/lookup', [WebFriendController::class, 'lookup']);
+$router->get('/app/friends/{publicId}', [WebFriendController::class, 'show']);
 $router->post('/app/friends', [WebFriendController::class, 'store']);
 $router->post('/app/friends/{id}/accept', [WebFriendController::class, 'accept']);
 $router->post('/app/friends/{id}/decline', [WebFriendController::class, 'decline']);
@@ -49,6 +50,7 @@ $router->post('/app/friends/{id}/delete', [WebFriendController::class, 'destroy'
 $router->post('/app/profile', [ProfileController::class, 'update']);
 $router->get('/app/profile/stream', [ProfileController::class, 'stream']);
 $router->get('/app/settings', [PageController::class, 'settings']);
+$router->post('/app/settings/visibility', [ProfileController::class, 'visibility']);
 $router->get('/login', [PageController::class, 'login']);
 $router->get('/prihlaseni', [PageController::class, 'login']);
 $router->get('/register', [PageController::class, 'register']);

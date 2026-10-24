@@ -69,6 +69,17 @@ final class AuthController extends ApiController
     {
         $user = $this->requireUser($request);
         $body = $request->all();
+        $users = new UserRepository(db());
+        if (array_key_exists('visibility', $body)) {
+            $visibility = is_scalar($body['visibility']) ? (string) $body['visibility'] : '';
+            if ($visibility !== 'public' && $visibility !== 'private') {
+                $this->json(['ok' => false, 'message' => 'Vyber veřejný, nebo soukromý účet.'], 422);
+            }
+            if ((string) ($user['visibility'] ?? 'public') !== $visibility) {
+                $users->setVisibility((int) $user['id'], $visibility);
+                $user = $users->findById((int) $user['id']) ?? $user;
+            }
+        }
         $input = [];
         foreach (['first', 'last', 'username', 'email'] as $key) {
             if (array_key_exists($key, $body) && $body[$key] !== null) {
@@ -78,8 +89,12 @@ final class AuthController extends ApiController
         if (array_key_exists('photo', $body)) {
             $input['photo'] = $body['photo'];
         }
+        if ($input === [] && !array_key_exists('photo', $body)) {
+            $fresh = $users->findById((int) $user['id']) ?? $user;
+            $this->json(['ok' => true, 'user' => UserRepository::toPublic($fresh)]);
+        }
 
-        $result = (new ProfileService(new UserRepository(db())))->update($user, $input);
+        $result = (new ProfileService($users))->update($user, $input);
         if (!$result['ok']) {
             $payload = ['ok' => false];
             if (isset($result['errors'])) {

@@ -29,6 +29,7 @@ $gamesLabel = static function (int $count): string {
     return $count . ' zápasů';
 };
 $winRate = (int) $career['played'] > 0 ? (int) round((int) $career['wins'] / (int) $career['played'] * 100) : null;
+$private = !empty($record['private']);
 $csrf = auth()->csrfToken();
 $mark = static function (string $result): array {
     return match ($result) {
@@ -58,10 +59,17 @@ $mark = static function (string $result): array {
 </div>
 </header>
 
+<?php if ($private): ?>
+<section class="panel" aria-labelledby="private-title">
+<p class="eyebrow">Soukromý účet</p>
+<h2 class="mt-2" id="private-title">Statistiky nejsou vidět</h2>
+<p class="mt-2 text-sm text-zinc-400">Ten účet je soukromý. Kamarádům se neukazují průměry, zápasy ani vzájemná bilance.</p>
+</section>
+<?php else: ?>
 <div class="grid gap-4 sm:grid-cols-2">
 <section class="panel" aria-labelledby="career-title">
 <h2 id="career-title">Jeho hra</h2>
-<p class="mt-1 text-xs text-zinc-500">Z zápasů, které nahrál na svůj účet.</p>
+<p class="mt-1 text-xs text-zinc-500">Ze zápasů, které nahrál na svůj účet.</p>
 <dl class="mt-5 grid grid-cols-2 gap-4">
 <div><dt class="text-[10px] font-semibold tracking-wide text-zinc-500 uppercase">Průměr</dt><dd class="num mt-1 text-3xl leading-none"><?= e($avg($career['average'])) ?></dd></div>
 <div><dt class="text-[10px] font-semibold tracking-wide text-zinc-500 uppercase">Zápasy</dt><dd class="num mt-1 text-3xl leading-none"><?= (int) $career['played'] ?></dd></div>
@@ -120,9 +128,8 @@ $mark = static function (string $result): array {
 <p class="mt-3 text-xs text-zinc-500">Hru, kterou jsi nahrál ty, jde otevřít. Zápas z jeho telefonu je tady jen jako výsledek.</p>
 <?php endif; ?>
 </section>
+<?php endif; ?>
 
-<form class="mt-6" method="post" action="<?= e(url('/app/friends/' . (int) $friend['id'] . '/delete')) ?>">
-<input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
-<button class="pill text-rose-300!" type="submit">Odebrat z kamarádů</button>
-</form>
+<button class="pill mt-6 text-rose-300!" type="button" data-sheet="sheet-remove-friend" data-remove-action="<?= e(url('/app/friends/' . (int) $friend['id'] . '/delete')) ?>" data-remove-name="<?= e($name) ?>">Odebrat z kamarádů</button>
+<?php require __DIR__ . '/../partials/friend-remove.php'; ?>
 </main>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Core\Database;
+use PDOException;
 
 final class UserRepository
 {
@@ -46,6 +47,44 @@ final class UserRepository
         return $this->db->fetch('SELECT 1 FROM users WHERE email = ? AND id != ?', [$email, $exceptId]) !== null;
     }
 
+    /** Prázdný nebo příliš krátký dotaz znamená návrhy, ne hledání. */
+    public function isDirectorySearch(string $query): bool
+    {
+        return mb_strlen($this->needle($query)) >= 2;
+    }
+
+    /**
+     * Návrhy bez dotazu, jinak hledání. E-mail ve výsledku není.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function directory(string $query, int $exceptId): array
+    {
+        return $this->isDirectorySearch($query)
+            ? $this->searchDirectory($query, $exceptId)
+            : $this->suggestDirectory($exceptId);
+    }
+
+    /**
+     * Pár nejnovějších aktivních účtů, ať má hledání co ukázat ještě před psaním.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function suggestDirectory(int $exceptId, int $limit = 8): array
+    {
+        $limit = max(1, min($limit, 20));
+        $rows = $this->db->fetchAll(
+            'SELECT id, public_id, username, first_name, last_name, avatar_path, profile_revision
+             FROM users
+             WHERE status = \'active\' AND id != ?
+             ORDER BY created_at DESC, id DESC
+             LIMIT ' . $limit,
+            [$exceptId]
+        );
+
+        return array_map(self::toDirectory(...), $rows);
+    }
+
     /**
      * Aktivní účty podle jména, username, nebo přesného e-mailu. E-mail ve výsledku není.
      *
@@ -53,11 +92,7 @@ final class UserRepository
      */
     public function searchDirectory(string $query, int $exceptId): array
     {
-        $needle = trim($query);
-        if (str_starts_with($needle, '@') && !str_contains(substr($needle, 1), '@')) {
-            $needle = trim(substr($needle, 1));
-        }
-        $needle = mb_substr($needle, 0, 40);
+        $needle = $this->needle($query);
         if (mb_strlen($needle) < 2) {
             return [];
         }
@@ -74,7 +109,7 @@ final class UserRepository
         $params[] = $needle;
         $params[] = $prefix;
         $rows = $this->db->fetchAll(
-            'SELECT id, username, first_name, last_name, avatar_path, profile_revision
+            'SELECT id, public_id, username, first_name, last_name, avatar_path, profile_revision
              FROM users
              WHERE status = \'active\' AND id != ?
                AND (username LIKE ? OR first_name LIKE ? OR last_name LIKE ?
@@ -87,17 +122,42 @@ final class UserRepository
         return array_map(self::toDirectory(...), $rows);
     }
 
+    private function needle(string $query): string
+    {
+        $needle = trim($query);
+        if (str_starts_with($needle, '@') && !str_contains(substr($needle, 1), '@')) {
+            $needle = trim(substr($needle, 1));
+        }
+
+        return mb_substr($needle, 0, 40);
+    }
+
     /** @param array{username:string,email:string,password:string,first_name:string,last_name:string,avatar_path?:?string} $data */
     public function create(array $data): int
     {
-        return $this->db->insert('users', [
-            'username' => $data['username'],
-            'email' => $data['email'],
-            'password_hash' => password_hash($data['password'], PASSWORD_DEFAULT),
-            'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
-            'avatar_path' => $data['avatar_path'] ?? null,
-        ]);
+        for ($attempt = 0; ; $attempt++) {
+            try {
+                return $this->db->insert('users', [
+                    'public_id' => self::newPublicId(),
+                    'username' => $data['username'],
+                    'email' => $data['email'],
+                    'password_hash' => password_hash($data['password'], PASSWORD_DEFAULT),
+                    'first_name' => $data['first_name'],
+                    'last_name' => $data['last_name'],
+                    'avatar_path' => $data['avatar_path'] ?? null,
+                ]);
+            } catch (PDOException $e) {
+                // 23000 = porušený unikátní klíč; při shodě public_id zkusí jiné
+                if ($e->getCode() !== '23000' || !str_contains($e->getMessage(), 'users_public_unique') || $attempt >= 2) {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    public static function newPublicId(): string
+    {
+        return bin2hex(random_bytes(12));
     }
 
     public function updatePassword(int $id, string $password): void
@@ -125,6 +185,17 @@ final class UserRepository
                 $data['avatar_path'],
                 $id,
             ]
+        );
+    }
+
+    public function setVisibility(int $id, string $visibility): void
+    {
+        if ($visibility !== 'public' && $visibility !== 'private') {
+            throw new \InvalidArgumentException('Vyber veřejný, nebo soukromý účet.');
+        }
+        $this->db->query(
+            'UPDATE users SET visibility = ?, profile_revision = profile_revision + 1, updated_at = UTC_TIMESTAMP() WHERE id = ?',
+            [$visibility, $id]
         );
     }
 
@@ -163,6 +234,7 @@ final class UserRepository
 
         return [
             'id' => (int) $user['id'],
+            'publicId' => (string) ($user['public_id'] ?? ''),
             'username' => $user['username'],
             'email' => $user['email'],
             'first' => $user['first_name'],
@@ -172,6 +244,7 @@ final class UserRepository
             'plan' => $plan,
             'planExpiresAt' => $expires,
             'role' => $user['role'],
+            'visibility' => ($user['visibility'] ?? 'public') === 'private' ? 'private' : 'public',
         ];
     }
 
@@ -187,6 +260,7 @@ final class UserRepository
 
         return [
             'id' => (int) $user['id'],
+            'publicId' => (string) ($user['public_id'] ?? ''),
             'username' => $user['username'],
             'first' => $user['first_name'],
             'last' => $user['last_name'],

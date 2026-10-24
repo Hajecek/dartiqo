@@ -19,11 +19,17 @@ final class PeopleController extends ApiController
     {
         $user = $this->requireUser($request);
         $userId = (int) $user['id'];
-        $people = (new UserRepository(db()))->searchDirectory($request->input('q'), $userId);
+        $users = new UserRepository(db());
+        $query = $request->input('q');
+        $people = $users->directory($query, $userId);
         $relations = (new FriendRepository(db()))->relations($userId, array_column($people, 'id'));
         foreach ($people as $index => $person) {
             $people[$index]['relation'] = $relations[(int) $person['id']] ?? 'none';
         }
-        $this->json(['ok' => true, 'people' => $people]);
+        $this->json([
+            'ok' => true,
+            'suggested' => !$users->isDirectorySearch($query),
+            'people' => $people,
+        ]);
     }
 }
