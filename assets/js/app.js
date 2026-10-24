@@ -441,15 +441,34 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     return `<div class="match-glass flex min-h-[2.4em] items-center rounded-[14px] px-[.55em] py-[.3em] 2xl:rounded-[20px]" style="font-size:clamp(22px,3.5vh,52px)"><span class="min-w-0 flex-[.7] truncate text-center font-semibold text-white/80 tabular-nums" style="font-size:.58em">${escapeHtml(caption)}</span>${m.setsToWin>1?score('Sety',m.players.map(p=>p.sets),m.setsToWin):''}${m.setsToWin>1||m.legsToWin>1?score('Legy',m.players.map(p=>p.legs),m.legsToWin):''}</div>`;
   };
 
-  const sideStat=(title,value)=>`<span class="flex flex-col items-end leading-none"><span class="font-extrabold tracking-wide uppercase opacity-55" style="font-size:clamp(11px,1.2vh,18px)">${title}</span><b class="leading-none font-extrabold tabular-nums" style="font-size:clamp(32px,5vh,84px)">${value}</b></span>`;
+  const sideStat=(title,value,attr='')=>`<span class="flex flex-col items-end leading-none"><span class="font-extrabold tracking-wide uppercase opacity-55" style="font-size:clamp(11px,1.2vh,18px)">${title}</span><b class="leading-none font-extrabold tabular-nums" style="font-size:clamp(32px,5vh,84px)" ${attr}>${value}</b></span>`;
   const panelChips=(m,p,i)=>{
     const won=m.winner===i?`<span class="inline-flex items-center rounded-full px-[.55em] py-[.18em] text-[.68em] font-extrabold uppercase" style="background:${MC.ink};color:${MC.green}">Vítěz</span>`:'';
     if(m.mode==='cricket') return won+sideStat('Zavřeno',m.numbers.filter(n=>(p.marks[n]||0)>=3).length+'/'+m.numbers.length);
     if(m.mode==='aroundClock') return won+sideStat('Hotovo',(p.score==='Bull'?20:Math.max(0,+p.score-1))+'/21');
-    const avg=p.darts?p.average.toFixed(1):'—';
     const result=m.setsToWin>1?sideStat('Sety',p.sets)+sideStat('Legy',p.legs):(m.legsToWin>1?sideStat('Legy',p.legs):'');
-    return won+sideStat('Ø',avg)+result;
+    return won+sideStat('Ø','—','data-avg')+result;
   };
+
+  // Telefon posílá průměr jen z uzavřených kol. Rozhozená šipka se přičte hned, stejně jako na hřišti v aplikaci.
+  const liveAverage=(m,p,i)=>{
+    let points=0,darts=0;
+    for(const v of m.visits||[]){
+      if(v.player!==i) continue;
+      points+=+v.score||0;
+      darts+=(v.darts||[]).length;
+    }
+    const open=onTurn(m,i)?(m.currentDarts||[]):[];
+    if(darts===(p.darts||0)){
+      for(const d of open){points+=dartValue(d);darts+=1}
+      return darts?points/darts*3:null;
+    }
+    const extra=open.reduce((sum,d)=>sum+dartValue(d),0);
+    const total=(p.darts||0)+open.length;
+    if(!total) return null;
+    return (((+p.average||0)/3)*(p.darts||0)+extra)/total*3;
+  };
+  const formatAverage=n=>n==null?'—':n.toFixed(1);
 
   // Karty se staví jen jednou na zápas, pak se mění jen hodnoty, aby mohly běžet animace
   const buildPanels=(grid,m,cols,rows)=>{
@@ -491,6 +510,25 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
     el._raf=requestAnimationFrame(step);
   };
 
+  // Průměr dojede po desetinách. První číslo zápasu naskočí, každá další šipka ho rozpohybuje.
+  const countAvg=(el,text)=>{
+    cancelAnimationFrame(el._raf);
+    const shown=el.dataset.avgReady?el.textContent:null;
+    el.dataset.avgReady='1';
+    el.dataset.value=text;
+    const from=shown==null?NaN:shown==='—'?0:+String(shown).replace(',','.');
+    const to=text==='—'?NaN:+text;
+    if(reduced||shown==null||shown===text||!Number.isFinite(from)||!Number.isFinite(to)){el.textContent=text;return}
+    const start=performance.now(),duration=Math.min(720,380+Math.abs(to-from)*28);
+    const step=now=>{
+      const t=Math.min(1,(now-start)/duration);
+      el.textContent=(from+(to-from)*(1-Math.pow(1-t,3))).toFixed(1);
+      if(t<1)el._raf=requestAnimationFrame(step);
+      else el.textContent=text;
+    };
+    el._raf=requestAnimationFrame(step);
+  };
+
   const paintPlayers=m=>{
     const grid=$('#live-players');
     const cols=Math.min(2,m.players.length),rows=Math.ceil(m.players.length/cols);
@@ -504,7 +542,24 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
       const score=$('[data-score]',panel);
       score.style.color=active?'#fff':MC.ink;
       countTo(score,String(p.score));
-      $('[data-chips]',panel).innerHTML=panelChips(m,p,i);
+      const chips=$('[data-chips]',panel);
+      if(m.mode==='cricket'||m.mode==='aroundClock'){
+        chips.innerHTML=panelChips(m,p,i);
+        delete chips.dataset.key;
+      }else{
+        const key=[m.winner===i?1:0,p.sets,p.legs,m.setsToWin,m.legsToWin].join(':');
+        const current=$('[data-avg]',chips);
+        const prevText=current?.textContent??'';
+        const prevReady=current?.dataset.avgReady||'';
+        if(chips.dataset.key!==key){
+          chips.innerHTML=panelChips(m,p,i);
+          chips.dataset.key=key;
+          const fresh=$('[data-avg]',chips);
+          if(fresh&&prevReady){fresh.dataset.avgReady=prevReady;fresh.textContent=prevText}
+        }
+        const avg=$('[data-avg]',chips);
+        if(avg) countAvg(avg,formatAverage(liveAverage(m,p,i)));
+      }
     });
     const focus=m.winner??m.active;
     grid._focus=[focus,m.winner!=null?MC.green:MC.coral];

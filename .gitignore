@@ -1,2 +1,4 @@
 uploads/avatars/*
 !uploads/avatars/.htaccess
+storage/firebase/*.json
+storage/cache/

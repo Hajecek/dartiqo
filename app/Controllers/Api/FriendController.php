@@ -7,6 +7,7 @@ namespace App\Controllers\Api;
 use App\Core\Request;
 use App\Repositories\FriendRepository;
 use App\Services\FriendDossier;
+use App\Services\FriendNotifier;
 use InvalidArgumentException;
 
 final class FriendController extends ApiController
@@ -51,6 +52,7 @@ final class FriendController extends ApiController
             $this->json(['ok' => false, 'message' => $e->getMessage()], 422);
         }
 
+        (new FriendNotifier(db()))->afterRequest($user, $result);
         $this->json(['ok' => true, 'friendship' => $result['friendship'], 'relation' => $result['relation']]);
     }
 
@@ -105,6 +107,9 @@ final class FriendController extends ApiController
             $this->json(['ok' => false, 'message' => $e->getMessage()], $missing ? 404 : 422);
         }
 
+        if ($action === 'accept') {
+            (new FriendNotifier(db()))->accepted($user, $friendship);
+        }
         $this->json(['ok' => true, 'friendship' => $friendship]);
     }
 }

@@ -17,7 +17,7 @@ ServerSignature Off
     RewriteCond %{HTTP:Authorization} .
     RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    RewriteRule ^(config|routes|resources|src|database)(/|$) - [F,L]
+    RewriteRule ^(config|routes|resources|src|database|storage|scripts)(/|$) - [F,L]
     RewriteRule ^app/(Core|Controllers|Support)(/|$) - [F,L]
     RewriteRule ^app/.*\.php$ - [F,L]
     RewriteRule ^app(/.*)?$ index.php [L]

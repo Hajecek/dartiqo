@@ -92,8 +92,9 @@ final class FriendRepository
 
     /**
      * Pošle žádost. Když už žádost poslal druhý hráč, tímhle se přijme.
+     * `changed` je true jen když se stav opravdu změnil a má smysl poslat push.
      *
-     * @return array{friendship: array<string, mixed>, relation: string}
+     * @return array{friendship: array<string, mixed>, relation: string, changed: bool}
      */
     public function request(int $userId, int $otherId): array
     {
@@ -115,7 +116,7 @@ final class FriendRepository
                 'status' => 'pending',
             ]);
 
-            return $this->outcome($userId, $id, 'outgoing');
+            return $this->outcome($userId, $id, 'outgoing', true);
         }
 
         $id = (int) $row['id'];
@@ -130,7 +131,7 @@ final class FriendRepository
         if ($status === 'pending' || ($status === 'declined' && $requester !== $userId)) {
             $this->db->update('friendships', ['status' => 'accepted'], 'id = :id', ['id' => $id]);
 
-            return $this->outcome($userId, $id, 'accepted');
+            return $this->outcome($userId, $id, 'accepted', true);
         }
 
         $this->db->update('friendships', [
@@ -138,7 +139,7 @@ final class FriendRepository
             'status' => 'pending',
         ], 'id = :id', ['id' => $id]);
 
-        return $this->outcome($userId, $id, 'outgoing');
+        return $this->outcome($userId, $id, 'outgoing', true);
     }
 
     /** @return array<string, mixed> */
@@ -183,12 +184,13 @@ final class FriendRepository
         $this->db->query('DELETE FROM friendships WHERE id = ?', [(int) $row['id']]);
     }
 
-    /** @return array{friendship: array<string, mixed>, relation: string} */
-    private function outcome(int $userId, int $id, string $relation): array
+    /** @return array{friendship: array<string, mixed>, relation: string, changed: bool} */
+    private function outcome(int $userId, int $id, string $relation, bool $changed = false): array
     {
         return [
             'friendship' => $this->present($this->requireRow($userId, $id)),
             'relation' => $relation,
+            'changed' => $changed,
         ];
     }
 

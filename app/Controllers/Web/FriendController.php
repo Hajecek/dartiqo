@@ -9,6 +9,7 @@ use App\Core\View;
 use App\Repositories\FriendRepository;
 use App\Repositories\UserRepository;
 use App\Services\FriendDossier;
+use App\Services\FriendNotifier;
 use InvalidArgumentException;
 
 /** Kamarádi a žádosti na webu. Potvrzení je stejné jako v aplikaci. */
@@ -101,6 +102,7 @@ final class FriendController
         $otherId = (int) $request->input('userId');
         try {
             $result = (new FriendRepository(db()))->request((int) $user['id'], $otherId);
+            (new FriendNotifier(db()))->afterRequest($user, $result);
             $message = $result['relation'] === 'accepted'
                 ? 'Je z vás kamarádi.'
                 : 'Žádost je odeslaná. Kamarádem bude, až ji přijme.';
@@ -156,12 +158,16 @@ final class FriendController
         $id = (int) ($params['id'] ?? 0);
         $repo = new FriendRepository(db());
         try {
-            match ($action) {
-                'accept' => $repo->accept((int) $user['id'], $id),
-                'decline' => $repo->decline((int) $user['id'], $id),
-                'cancel' => $repo->cancel((int) $user['id'], $id),
-                default => $repo->remove((int) $user['id'], $id),
-            };
+            if ($action === 'accept') {
+                $friendship = $repo->accept((int) $user['id'], $id);
+                (new FriendNotifier(db()))->accepted($user, $friendship);
+            } elseif ($action === 'decline') {
+                $repo->decline((int) $user['id'], $id);
+            } elseif ($action === 'cancel') {
+                $repo->cancel((int) $user['id'], $id);
+            } else {
+                $repo->remove((int) $user['id'], $id);
+            }
             $this->flash($success);
         } catch (InvalidArgumentException $e) {
             $this->flash($e->getMessage());

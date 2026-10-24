@@ -40,6 +40,35 @@ final class FcmTokenRepository
         );
     }
 
+    /** @return list<string> */
+    public function activeTokens(int $userId): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT token FROM fcm_tokens
+             WHERE user_id = ? AND is_active = 1 AND invalidated_at IS NULL AND token LIKE '%:%'",
+            [$userId]
+        );
+        $tokens = [];
+        foreach ($rows as $row) {
+            $token = trim((string) ($row['token'] ?? ''));
+            if ($token !== '' && str_contains($token, ':')) {
+                $tokens[$token] = $token;
+            }
+        }
+
+        return array_values($tokens);
+    }
+
+    public function invalidate(string $token, string $reason): void
+    {
+        $this->db->query(
+            'UPDATE fcm_tokens
+             SET is_active = 0, invalidated_at = UTC_TIMESTAMP(), invalid_reason = ?
+             WHERE token_hash = ? AND is_active = 1',
+            [mb_substr($reason, 0, 255), hash('sha256', $token)]
+        );
+    }
+
     public function deactivateForApiToken(int $apiTokenId, string $reason): void
     {
         $this->db->query(
