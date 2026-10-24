@@ -336,10 +336,20 @@ if(liveBanner&&typeof EventSource!=='undefined'){
   };
   const clockSeconds=()=>clock.played+(clock.running?Math.max(0,Date.now()-clock.at)/1000:0);
   const bindClock=m=>{
-    clock.played=Math.max(0,Math.round(+m?.played||0));
-    clock.running=!!(m&&m.running&&m.status==='live'&&!m.paused);
-    clock.at=Date.now();
+    const played=Math.max(0,Math.round(+m?.played||0));
+    const running=!!(m&&m.running&&m.status==='live'&&!m.paused);
+    const shown=clock.running?clockSeconds():clock.played;
+    if(!(running&&clock.running&&played<shown-1)){
+      clock.played=played;
+      clock.at=Date.now();
+    }
+    clock.running=running;
     paintClock();
+  };
+  const liveStamp=m=>{
+    if(!m) return '';
+    const last=(m.visits||[]).at(-1);
+    return [m.id,m.status,m.leg,m.set,m.active,m.winner??'',m.legWinner??'',m.paused?1:0,m.bullOff?1:0,(m.currentDarts||[]).join(','),m.players.map(p=>[p.score,p.legs,p.sets,p.darts,p.checkout,p.setup].join(':')).join('|'),(m.visits||[]).length,last?[last.player,last.score,(last.darts||[]).join(''),last.checkout?1:0,last.bust?1:0].join(':'):''].join(';');
   };
   const paintClock=()=>{
     const box=$('#live-clock'),value=$('#live-clock-value');
@@ -1002,7 +1012,11 @@ ${finished?hint:`<span class="flex items-center gap-3"><span class="text-[10px] 
   const apply=m=>{
     if(m&&current&&m.id===current.id&&m.seq<current.seq) return;
     lastEvent=Date.now();
-    if(m&&current&&m.id===current.id&&m.seq===current.seq&&m.status===current.status){if(livePage)paintBadge(m);return}
+    if(m&&current&&liveStamp(m)===liveStamp(current)){
+      current=m;
+      if(livePage){bindClock(m);paintBadge(m)}
+      return;
+    }
     paint(m);
   };
   const markWaiting=()=>{
