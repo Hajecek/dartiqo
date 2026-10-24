@@ -114,6 +114,14 @@
   body {
     @apply m-0 bg-canvas font-sans text-ink antialiased;
   }
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
   button,
   a,
   input,
