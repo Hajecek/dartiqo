@@ -256,7 +256,7 @@ $verdict = (string) $game['label'];
 <dialog class="m-auto w-[min(420px,calc(100%-2rem))] rounded-[28px] border border-white/10 bg-zinc-950 p-6 text-left text-zinc-100 shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm open:animate-reveal" id="sheet-delete-match">
 <span class="grid size-12 place-items-center rounded-2xl bg-rose-400/10 text-rose-300 ring-1 ring-rose-400/25 ring-inset"><?= dartiqo_i('trash', 'size-5') ?></span>
 <h2 class="mt-4">Smazat zápas?</h2>
-<p class="mt-2 text-sm text-zinc-400">Zápas zmizí z webu i ze statistik a smaže se i v aplikaci. Nejde to vrátit.</p>
+<p class="mt-2 text-sm text-zinc-400">Zápas zmizí ze seznamu i ze statistik. V počtu odehraných zápasů zůstane.</p>
 <p class="mt-3 hidden text-sm text-rose-300" data-delete-error></p>
 <div class="mt-6 flex justify-end gap-2">
 <button class="pill" type="button" data-sheet-close>Zrušit</button>

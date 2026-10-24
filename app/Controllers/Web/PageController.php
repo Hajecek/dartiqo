@@ -132,9 +132,11 @@ final class PageController
     /** @param array<string, string> $params */
     public function profile(Request $request, array $params = []): void
     {
+        $user = auth()->user();
         $this->page('public.profile', 'Profil | Dartiqo', 'app-body', 'layouts.app', [
             'insights' => $this->insights(),
             'incomingFriends' => $this->incomingFriendCount(),
+            'completedMatches' => $user === null ? 0 : (new MatchRepository(db()))->completedCount((int) $user['id']),
         ]);
     }
 

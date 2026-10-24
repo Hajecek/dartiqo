@@ -7,7 +7,7 @@ $summary = $insights->summary();
 $stats = [
     ['Průměr', $summary['average'] === null ? '–' : number_format($summary['average'], 1, '.', ''), 'celkově'],
     ['Výhry', $summary['played'] > 0 ? $summary['winRate'] . ' %' : '–', $summary['won'] . ' z ' . $summary['played']],
-    ['Zápasy', (string) $summary['matches'], 'odehráno'],
+    ['Zápasy', (string) (int) ($completedMatches ?? $summary['matches']), 'odehráno'],
     ['Maximum 180', (string) $summary['scores180'], 'celkem'],
 ];
 $locked = 'text-zinc-500 bg-white/[.04] ring-white/10';

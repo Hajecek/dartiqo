@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS matches (
     user_id BIGINT UNSIGNED NOT NULL,
     -- UUID zápasu z aplikace; opakované nahrání zápas jen přepíše
     client_id CHAR(36) NOT NULL,
-    status ENUM('live', 'finished', 'abandoned') NOT NULL,
+    status ENUM('live', 'finished', 'abandoned', 'deleted') NOT NULL,
     -- Pořadí živé aktualizace z aplikace; starší požadavek nepřepíše novější snímek
     seq INT UNSIGNED NOT NULL DEFAULT 0,
     mode ENUM('x01', 'cricket', 'aroundClock', 'countUp') NOT NULL,

@@ -116,7 +116,7 @@ final class FriendDossier
                     SUM(CASE WHEN is_solo = 0 AND result = 'lost' THEN 1 ELSE 0 END) AS losses,
                     AVG(CASE WHEN average IS NOT NULL THEN average END) AS average
              FROM matches
-             WHERE status = 'finished' AND user_id IN ({$placeholders})
+             WHERE status IN ('finished', 'deleted') AND user_id IN ({$placeholders})
              GROUP BY user_id",
             $ids
         );

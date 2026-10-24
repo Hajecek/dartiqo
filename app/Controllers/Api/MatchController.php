@@ -40,7 +40,7 @@ final class MatchController extends ApiController
 
         $matches = new MatchRepository(db());
         if ($match['status'] === 'abandoned') {
-            $matches->delete((int) $user['id'], $clientId);
+            $matches->discard((int) $user['id'], $clientId);
             $this->json(['ok' => true]);
         }
 

@@ -265,12 +265,13 @@ final class MatchRepository
         $this->db->query('DELETE FROM matches WHERE user_id = :user AND status = \'abandoned\'', ['user' => $userId]);
     }
 
+    /**
+     * Smazání nechá dohraný zápas v tabulce se stavem deleted.
+     * Rozehraný zápas bez logu se tím nesmaže.
+     */
     public function delete(int $userId, string $clientId): void
     {
-        $this->db->query('DELETE FROM matches WHERE user_id = :user AND client_id = :client', [
-            'user' => $userId,
-            'client' => $clientId,
-        ]);
+        $this->markDeleted('user_id = :user AND client_id = :client', ['user' => $userId, 'client' => $clientId]);
     }
 
     /** Smazání z webu podle veřejného id. Cizí zápas nesmaže a vrací false. */
@@ -280,10 +281,46 @@ final class MatchRepository
             return false;
         }
 
-        return $this->db->query('DELETE FROM matches WHERE public_id = :public AND user_id = :user', [
+        return $this->markDeleted('public_id = :public AND user_id = :user', [
             'public' => $publicId,
             'user' => $userId,
-        ])->rowCount() > 0;
+        ]) > 0;
+    }
+
+    /**
+     * Dokončené zápasy účtu: ty ve seznamu i ty, které uživatel smazal.
+     * Smazané mají stav deleted a ze seznamu i statistik zmizí, v počtu zůstávají.
+     */
+    public function completedCount(int $userId): int
+    {
+        $row = $this->db->fetch(
+            'SELECT COUNT(*) AS n FROM matches
+             WHERE user_id = :user AND status IN (\'finished\', \'deleted\')
+               AND JSON_EXTRACT(log, \'$.version\') IS NOT NULL',
+            ['user' => $userId]
+        );
+
+        return (int) ($row['n'] ?? 0);
+    }
+
+    /** Nedohraný zápas v tabulce nezůstává. Smazaný dokončený zápas se nemaže. */
+    public function discard(int $userId, string $clientId): void
+    {
+        $this->db->query(
+            'DELETE FROM matches WHERE user_id = :user AND client_id = :client AND status <> \'deleted\'',
+            ['user' => $userId, 'client' => $clientId]
+        );
+    }
+
+    /** @param array<string, mixed> $params */
+    private function markDeleted(string $where, array $params): int
+    {
+        return $this->db->query(
+            'UPDATE matches SET status = \'deleted\'
+             WHERE ' . $where . ' AND status IN (\'finished\', \'abandoned\')
+               AND JSON_EXTRACT(log, \'$.version\') IS NOT NULL',
+            $params
+        )->rowCount();
     }
 
     /**
