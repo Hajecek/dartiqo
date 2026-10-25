@@ -30,6 +30,7 @@ final class MatchRepository
             $this->db->query(
                 'DELETE FROM matches
                  WHERE user_id = :user_id AND client_id = :client_id AND seq <= :seq
+                   AND kind <> \'online\'
                    AND JSON_EXTRACT(log, \'$.version\') IS NULL',
                 ['user_id' => $userId, 'client_id' => $clientId, 'seq' => $seq]
             );
@@ -40,7 +41,7 @@ final class MatchRepository
         $now = gmdate('Y-m-d H:i:s');
         $this->db->transaction(function (Database $db) use ($userId, $clientId, $status, $seq, $state, $startedAt, $now): void {
             $existing = $db->fetch(
-                'SELECT id, seq, log FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE',
+                'SELECT id, seq, log, kind FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE',
                 ['user' => $userId, 'client' => $clientId]
             );
             if ($existing === null) {
@@ -59,7 +60,7 @@ final class MatchRepository
                             throw $e;
                         }
                         $existing = $db->fetch(
-                            'SELECT id, seq, log FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE',
+                            'SELECT id, seq, log, kind FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE',
                             ['user' => $userId, 'client' => $clientId]
                         );
                         if ($existing !== null) {
@@ -67,6 +68,11 @@ final class MatchRepository
                         }
                     }
                 }
+            }
+
+            // Online zápas smí posunout jen šipka na serveru, ne snímek z telefonu.
+            if (($existing['kind'] ?? 'local') === 'online') {
+                return;
             }
 
             if ((int) $existing['seq'] >= $seq) {
@@ -176,10 +182,13 @@ final class MatchRepository
         ];
 
         return $this->db->transaction(function (Database $db) use ($userId, $clientId, $row): string {
-            $existing = $db->fetch('SELECT id, public_id, log FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE', [
+            $existing = $db->fetch('SELECT id, public_id, log, kind FROM matches WHERE user_id = :user AND client_id = :client FOR UPDATE', [
                 'user' => $userId,
                 'client' => $clientId,
             ]);
+            if ($existing !== null && ($existing['kind'] ?? 'local') === 'online') {
+                return (string) $existing['public_id'];
+            }
             if ($existing !== null) {
                 $previous = json_decode((string) $existing['log'], true);
                 if (is_array($previous) && is_array($previous['board'] ?? null)) {
@@ -307,7 +316,7 @@ final class MatchRepository
     public function discard(int $userId, string $clientId): void
     {
         $this->db->query(
-            'DELETE FROM matches WHERE user_id = :user AND client_id = :client AND status <> \'deleted\'',
+            'DELETE FROM matches WHERE user_id = :user AND client_id = :client AND status <> \'deleted\' AND kind <> \'online\'',
             ['user' => $userId, 'client' => $clientId]
         );
     }

@@ -85,8 +85,95 @@ CREATE TABLE IF NOT EXISTS fcm_tokens (
     CONSTRAINT fcm_tokens_api_token_fk FOREIGN KEY (api_token_id) REFERENCES api_tokens (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Společný online zápas. Tah, skóre a lobby žijí tady, ne v řádcích jednotlivých účtů.
+-- Kód se po skončení uvolní (NULL), aby ho šlo použít znovu.
+CREATE TABLE IF NOT EXISTS online_matches (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    public_id CHAR(24) NOT NULL,
+    host_user_id BIGINT UNSIGNED NOT NULL,
+    kind ENUM('classic', 'ranked') NOT NULL DEFAULT 'classic',
+    visibility ENUM('public', 'private') NOT NULL DEFAULT 'private',
+    code CHAR(6) NULL,
+    password_hash VARCHAR(255) NULL,
+    status ENUM('lobby', 'live', 'finished', 'abandoned') NOT NULL,
+    rules JSON NOT NULL,
+    active_slot TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    seq INT UNSIGNED NOT NULL DEFAULT 0,
+    state JSON NOT NULL,
+    started_at DATETIME NULL,
+    finished_at DATETIME NULL,
+    expires_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY online_matches_public_unique (public_id),
+    UNIQUE KEY online_matches_code_unique (code),
+    KEY online_matches_host_index (host_user_id, status),
+    KEY online_matches_list_index (status, visibility, created_at),
+    CONSTRAINT online_matches_host_fk FOREIGN KEY (host_user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Rating z ranked zápasů. Účet bez řádku má výchozích 1000.
+CREATE TABLE IF NOT EXISTS online_ratings (
+    user_id BIGINT UNSIGNED NOT NULL,
+    rating SMALLINT UNSIGNED NOT NULL DEFAULT 1000,
+    played INT UNSIGNED NOT NULL DEFAULT 0,
+    wins INT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (user_id),
+    CONSTRAINT online_ratings_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Slot 0 je hostitel, slot 1 host. V jednom zápase je každý účet jen jednou.
+CREATE TABLE IF NOT EXISTS online_match_players (
+    online_match_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    slot TINYINT UNSIGNED NOT NULL,
+    ready TINYINT(1) NOT NULL DEFAULT 0,
+    joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (online_match_id, user_id),
+    UNIQUE KEY online_match_players_slot_unique (online_match_id, slot),
+    KEY online_match_players_user_index (user_id),
+    CONSTRAINT online_match_players_match_fk FOREIGN KEY (online_match_id) REFERENCES online_matches (id) ON DELETE CASCADE,
+    CONSTRAINT online_match_players_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Špatné heslo do lobby. Po pěti pokusech je dvojice účet + kód na chvíli zamčená.
+CREATE TABLE IF NOT EXISTS online_join_attempts (
+    user_id BIGINT UNSIGNED NOT NULL,
+    code CHAR(6) NOT NULL,
+    failures TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    locked_until DATETIME NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (user_id, code),
+    CONSTRAINT online_join_attempts_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pozvánka kamaráda do lobby. Přijetí ho posadí do zápasu bez hesla.
+CREATE TABLE IF NOT EXISTS online_invites (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    online_match_id BIGINT UNSIGNED NOT NULL,
+    inviter_id BIGINT UNSIGNED NOT NULL,
+    invitee_id BIGINT UNSIGNED NOT NULL,
+    status ENUM('pending', 'accepted', 'declined') NOT NULL DEFAULT 'pending',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY online_invites_pair_unique (online_match_id, invitee_id),
+    KEY online_invites_invitee_index (invitee_id, status),
+    CONSTRAINT online_invites_match_fk FOREIGN KEY (online_match_id) REFERENCES online_matches (id) ON DELETE CASCADE,
+    CONSTRAINT online_invites_inviter_fk FOREIGN KEY (inviter_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT online_invites_invitee_fk FOREIGN KEY (invitee_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Zápas z mobilní aplikace, včetně právě hraného. Jeden řádek = jeden zápas jednoho účtu.
 -- status live web ukazuje živě. Sloupce slouží k výpisům, průběh a živý snímek jsou v log.
+-- Online zápas má kind online a odkaz na společný řádek. Skóre se do něj jen zrcadlí.
 CREATE TABLE IF NOT EXISTS matches (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     -- Náhodné veřejné id do odkazů (96 bitů); interní id se ven neukazuje
@@ -104,6 +191,9 @@ CREATE TABLE IF NOT EXISTS matches (
     has_bot TINYINT(1) NOT NULL DEFAULT 0,
     -- Sólo hra se nepočítá do výher a proher
     is_solo TINYINT(1) NOT NULL DEFAULT 0,
+    -- local = zápas z jednoho telefonu, online = kopie společného zápasu
+    kind ENUM('local', 'online') NOT NULL DEFAULT 'local',
+    online_match_id BIGINT UNSIGNED NULL,
     -- Výsledek majitele účtu
     result ENUM('won', 'lost', 'draw', 'none') NOT NULL DEFAULT 'none',
     -- Tříšipkový průměr majitele (X01, Count Up)
@@ -122,7 +212,9 @@ CREATE TABLE IF NOT EXISTS matches (
     UNIQUE KEY matches_client_unique (user_id, client_id),
     KEY matches_user_recent_index (user_id, status, started_at),
     KEY matches_live_index (user_id, status, updated_at),
-    CONSTRAINT matches_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    KEY matches_online_index (online_match_id),
+    CONSTRAINT matches_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT matches_online_fk FOREIGN KEY (online_match_id) REFERENCES online_matches (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Žádost o přátelství. Dvojice účtů je v tabulce jen jednou, user_low má menší id.
