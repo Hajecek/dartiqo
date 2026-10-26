@@ -5,11 +5,21 @@ declare(strict_types=1);
 namespace App\Controllers\Api;
 
 use App\Core\Request;
+use App\Repositories\MatchRepository;
 use App\Repositories\UserRepository;
 use App\Services\ProfileService;
 
 final class AuthController extends ApiController
 {
+    /** @param array<string, mixed> $user */
+    private function publicUser(array $user): array
+    {
+        $payload = UserRepository::toPublic($user);
+        $payload['matchCompletion'] = (new MatchRepository(db()))->completion((int) $user['id']);
+
+        return $payload;
+    }
+
     /** @param array<string, string> $params */
     public function login(Request $request, array $params = []): void
     {
@@ -28,7 +38,7 @@ final class AuthController extends ApiController
         }
 
         $token = $this->tokens->create((int) $user['id'], trim($request->input('device')));
-        $this->json(['ok' => true, 'token' => $token, 'user' => UserRepository::toPublic($user)]);
+        $this->json(['ok' => true, 'token' => $token, 'user' => $this->publicUser($user)]);
     }
 
     /**
@@ -61,7 +71,7 @@ final class AuthController extends ApiController
     /** @param array<string, string> $params */
     public function me(Request $request, array $params = []): void
     {
-        $this->json(['ok' => true, 'user' => UserRepository::toPublic($this->requireUser($request))]);
+        $this->json(['ok' => true, 'user' => $this->publicUser($this->requireUser($request))]);
     }
 
     /** @param array<string, string> $params */
@@ -91,7 +101,7 @@ final class AuthController extends ApiController
         }
         if ($input === [] && !array_key_exists('photo', $body)) {
             $fresh = $users->findById((int) $user['id']) ?? $user;
-            $this->json(['ok' => true, 'user' => UserRepository::toPublic($fresh)]);
+            $this->json(['ok' => true, 'user' => $this->publicUser($fresh)]);
         }
 
         $result = (new ProfileService($users))->update($user, $input);
@@ -106,7 +116,8 @@ final class AuthController extends ApiController
             $this->json($payload, $result['status']);
         }
 
-        $this->json(['ok' => true, 'user' => $result['user']]);
+        $fresh = $users->findById((int) $user['id']) ?? $user;
+        $this->json(['ok' => true, 'user' => $this->publicUser($fresh)]);
     }
 
     /**
@@ -143,7 +154,7 @@ final class AuthController extends ApiController
             if ($revision !== $lastRevision) {
                 echo 'id: ' . $revision . "\n";
                 echo 'data: ' . json_encode(
-                    ['user' => UserRepository::toPublic($fresh)],
+                    ['user' => $this->publicUser($fresh)],
                     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
                 ) . "\n\n";
                 $lastRevision = $revision;

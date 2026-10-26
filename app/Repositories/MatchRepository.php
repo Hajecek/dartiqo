@@ -268,10 +268,44 @@ final class MatchRepository
         return $rows;
     }
 
-    /** Nedohraný zápas v historii nezůstává. */
+    /**
+     * Nedohraný lokální zápas v historii nezůstává.
+     * Zrušený online zápas v matches zůstává — z něj se počítá % dokončených.
+     */
     public function deleteAbandoned(int $userId): void
     {
-        $this->db->query('DELETE FROM matches WHERE user_id = :user AND status = \'abandoned\'', ['user' => $userId]);
+        $this->db->query(
+            'DELETE FROM matches
+             WHERE user_id = :user AND status = \'abandoned\' AND kind <> \'online\'',
+            ['user' => $userId]
+        );
+    }
+
+    /**
+     * Bilance z tabulky matches. Dokončené i smazané hotové zápasy vs. zrušené (hlavně online).
+     *
+     * @return array{completed:int,abandoned:int,percent:?float}
+     */
+    public function completion(int $userId): array
+    {
+        $row = $this->db->fetch(
+            'SELECT
+                SUM(status IN (\'finished\', \'deleted\')) AS completed,
+                SUM(status = \'abandoned\') AS abandoned
+             FROM matches
+             WHERE user_id = :user
+               AND JSON_EXTRACT(log, \'$.version\') IS NOT NULL',
+            ['user' => $userId]
+        );
+        $completed = (int) ($row['completed'] ?? 0);
+        $abandoned = (int) ($row['abandoned'] ?? 0);
+        $decided = $completed + $abandoned;
+
+        return [
+            'completed' => $completed,
+            'abandoned' => $abandoned,
+            'percent' => $decided > 0 ? round($completed / $decided * 100, 1) : null,
+        ];
     }
 
     /**

@@ -713,14 +713,18 @@ final class OnlineMatchRepository
 
                 return $this->present($db, (int) $match['id'], $userId);
             }
-            $forfeit = $match['status'] === 'live' && ($match['kind'] ?? 'classic') === 'ranked' && !$this->stale($match);
+            $wasLive = $match['status'] === 'live';
+            $forfeit = $wasLive && ($match['kind'] ?? 'classic') === 'ranked' && !$this->stale($match);
+            $state = $this->state($match);
             if ($forfeit) {
-                $state = $this->rate($db, $match, $this->state($match), 1 - (int) $member['slot']);
+                $state = $this->rate($db, $match, $state, 1 - (int) $member['slot']);
                 $db->update('online_matches', ['state' => self::json($state)], 'id = :id', ['id' => (int) $match['id']]);
             }
             $this->markAbandoned($db, (int) $match['id'], (int) $match['seq']);
-            if ($match['status'] === 'live') {
-                $this->deleteMirrors($db, (int) $match['id']);
+            if ($wasLive) {
+                // Zrušený live zápas zůstane v matches: kdo odešel má abandoned, soupeř finished.
+                $closed = $this->lockId($db, (int) $match['id']);
+                $this->mirrorQuit($db, $closed, $this->rules($closed), $state, $userId);
             }
             foreach ($this->players($db, (int) $match['id']) as $player) {
                 if ((int) $player['user_id'] !== $userId) {
@@ -953,9 +957,13 @@ final class OnlineMatchRepository
         if (!$expired && !$this->stale($match)) {
             return $match;
         }
+        $wasLive = $match['status'] === 'live';
+        $state = $this->state($match);
         $this->markAbandoned($db, (int) $match['id'], (int) $match['seq']);
-        if ($match['status'] === 'live') {
-            $this->deleteMirrors($db, (int) $match['id']);
+        if ($wasLive) {
+            // Vypršení bez šipky: oba mají zrušený zápas v matches.
+            $closed = $this->lockId($db, (int) $match['id']);
+            $this->mirror($db, $closed, $this->rules($closed), $state, 'abandoned');
         }
 
         return $this->lockId($db, (int) $match['id']);
@@ -1012,9 +1020,12 @@ final class OnlineMatchRepository
         foreach ($rows as $row) {
             $expired = $row['status'] === 'lobby' && $row['expires_at'] !== null && strtotime((string) $row['expires_at'] . ' UTC') <= time();
             if ($row['status'] === 'live' || $expired || (int) $row['host_user_id'] === $userId) {
+                $wasLive = $row['status'] === 'live';
+                $state = $this->state($row);
                 $this->markAbandoned($db, (int) $row['id'], (int) $row['seq']);
-                if ($row['status'] === 'live') {
-                    $this->deleteMirrors($db, (int) $row['id']);
+                if ($wasLive) {
+                    $closed = $this->lockId($db, (int) $row['id']);
+                    $this->mirrorQuit($db, $closed, $this->rules($closed), $state, $userId);
                 }
                 continue;
             }
@@ -1058,14 +1069,6 @@ final class OnlineMatchRepository
             'finished_at' => null,
             'updated_at' => gmdate('Y-m-d H:i:s'),
         ], 'id = :id', ['id' => $id]);
-    }
-
-    private function deleteMirrors(Database $db, int $matchId): void
-    {
-        $db->query(
-            'DELETE FROM matches WHERE online_match_id = :id AND status <> \'deleted\'',
-            ['id' => $matchId]
-        );
     }
 
     /**
@@ -1119,7 +1122,9 @@ final class OnlineMatchRepository
         $board = $this->board($rules, $state, $status, (int) $match['active_slot']);
         $now = gmdate('Y-m-d H:i:s');
         $played = $this->played($state);
-        $finished = $status === 'finished' ? $this->finishedLogs($rules, $state, $board, $played) : null;
+        $decided = in_array($status, ['finished', 'abandoned'], true)
+            ? $this->decisionLogs($rules, $state, $board, $played, $status)
+            : null;
         $darts = array_sum(array_map(static fn (array $player): int => (int) ($player['darts'] ?? 0), $state['players']));
         $title = mb_substr((string) ($state['title'] ?? 'Online'), 0, 160);
 
@@ -1128,42 +1133,141 @@ final class OnlineMatchRepository
                 continue;
             }
             $userId = (int) $player['userId'];
-            $log = $finished[$userId]['log'] ?? ['board' => $board];
-            $columns = [
-                'status' => $status,
-                'seq' => (int) $match['seq'],
-                'kind' => 'online',
-                'mode' => 'x01',
-                'title' => $title !== '' ? $title : 'Online',
-                'player_count' => count($state['players']),
-                'has_bot' => 0,
-                'is_solo' => 0,
-                'result' => $finished[$userId]['result'] ?? 'none',
-                'average' => $finished[$userId]['average'] ?? null,
-                'darts_thrown' => $darts,
-                'play_seconds' => $played,
-                'finished_at' => $status === 'finished' ? $now : null,
-                'updated_at' => $now,
-                'log' => self::json($log),
-            ];
-            if (isset($byUser[$userId])) {
-                $db->update('matches', $columns, 'id = :id', ['id' => $byUser[$userId]]);
+            $this->upsertMirror(
+                $db,
+                $match,
+                $state,
+                $byUser[$userId] ?? null,
+                $userId,
+                $status,
+                $title,
+                $darts,
+                $played,
+                $now,
+                $decided[$userId] ?? null,
+                $board
+            );
+        }
+    }
+
+    /**
+     * Kdo odešel z live zápasu má v matches abandoned. Soupeř dostane finished a výhru.
+     *
+     * @param array<string, mixed> $match
+     * @param array{startingScore:int,outRule:string,legsToWin:int,doubleIn:bool} $rules
+     * @param array<string, mixed> $state
+     */
+    private function mirrorQuit(Database $db, array $match, array $rules, array $state, int $quitterId): void
+    {
+        $quitterSlot = null;
+        foreach ($state['players'] as $index => $player) {
+            if (is_array($player) && (int) ($player['userId'] ?? 0) === $quitterId) {
+                $quitterSlot = (int) $index;
+                break;
+            }
+        }
+        if ($quitterSlot === null) {
+            $this->mirror($db, $match, $rules, $state, 'abandoned');
+
+            return;
+        }
+        $state['winner'] = 1 - $quitterSlot;
+        $rows = $db->fetchAll(
+            'SELECT id, user_id FROM matches WHERE online_match_id = :id FOR UPDATE',
+            ['id' => (int) $match['id']]
+        );
+        $byUser = [];
+        foreach ($rows as $row) {
+            $byUser[(int) $row['user_id']] = (int) $row['id'];
+        }
+        $board = $this->board($rules, $state, 'abandoned', (int) $match['active_slot']);
+        $now = gmdate('Y-m-d H:i:s');
+        $played = $this->played($state);
+        $abandoned = $this->decisionLogs($rules, $state, $board, $played, 'abandoned');
+        $finished = $this->decisionLogs($rules, $state, $board, $played, 'finished');
+        $darts = array_sum(array_map(static fn (array $player): int => (int) ($player['darts'] ?? 0), $state['players']));
+        $title = mb_substr((string) ($state['title'] ?? 'Online'), 0, 160);
+
+        foreach ($state['players'] as $player) {
+            if (!is_array($player)) {
                 continue;
             }
-            for ($attempt = 0; ; $attempt++) {
-                try {
-                    $db->insert('matches', $columns + [
-                        'public_id' => self::publicId(),
-                        'user_id' => $userId,
-                        'client_id' => (string) $match['public_id'],
-                        'online_match_id' => (int) $match['id'],
-                        'started_at' => gmdate('Y-m-d H:i:s', is_int($state['startedAt'] ?? null) ? $state['startedAt'] : time()),
-                    ]);
-                    break;
-                } catch (PDOException $e) {
-                    if ($e->getCode() !== '23000' || $attempt >= 4) {
-                        throw $e;
-                    }
+            $userId = (int) $player['userId'];
+            $quit = $userId === $quitterId;
+            $status = $quit ? 'abandoned' : 'finished';
+            $this->upsertMirror(
+                $db,
+                $match,
+                $state,
+                $byUser[$userId] ?? null,
+                $userId,
+                $status,
+                $title,
+                $darts,
+                $played,
+                $now,
+                ($quit ? $abandoned : $finished)[$userId] ?? null,
+                $board
+            );
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $match
+     * @param array<string, mixed> $state
+     * @param array{log: array<string, mixed>, result: string, average: ?float}|null $decided
+     * @param array<string, mixed> $board
+     */
+    private function upsertMirror(
+        Database $db,
+        array $match,
+        array $state,
+        ?int $rowId,
+        int $userId,
+        string $status,
+        string $title,
+        int $darts,
+        int $played,
+        string $now,
+        ?array $decided,
+        array $board,
+    ): void {
+        $log = $decided['log'] ?? ['board' => $board];
+        $columns = [
+            'status' => $status,
+            'seq' => (int) $match['seq'],
+            'kind' => 'online',
+            'mode' => 'x01',
+            'title' => $title !== '' ? $title : 'Online',
+            'player_count' => count($state['players']),
+            'has_bot' => 0,
+            'is_solo' => 0,
+            'result' => $decided['result'] ?? 'none',
+            'average' => $decided['average'] ?? null,
+            'darts_thrown' => $darts,
+            'play_seconds' => $played,
+            'finished_at' => in_array($status, ['finished', 'abandoned'], true) ? $now : null,
+            'updated_at' => $now,
+            'log' => self::json($log),
+        ];
+        if ($rowId !== null) {
+            $db->update('matches', $columns, 'id = :id', ['id' => $rowId]);
+
+            return;
+        }
+        for ($attempt = 0; ; $attempt++) {
+            try {
+                $db->insert('matches', $columns + [
+                    'public_id' => self::publicId(),
+                    'user_id' => $userId,
+                    'client_id' => (string) $match['public_id'],
+                    'online_match_id' => (int) $match['id'],
+                    'started_at' => gmdate('Y-m-d H:i:s', is_int($state['startedAt'] ?? null) ? $state['startedAt'] : time()),
+                ]);
+                break;
+            } catch (PDOException $e) {
+                if ($e->getCode() !== '23000' || $attempt >= 4) {
+                    throw $e;
                 }
             }
         }
@@ -1175,7 +1279,13 @@ final class OnlineMatchRepository
      * @param array<string, mixed> $board
      * @return array<int, array{log: array<string, mixed>, result: string, average: ?float}>
      */
-    private function finishedLogs(array $rules, array $state, array $board, int $played): array
+    /**
+     * @param array{startingScore:int,outRule:string,legsToWin:int,doubleIn:bool} $rules
+     * @param array<string, mixed> $state
+     * @param array<string, mixed> $board
+     * @return array<int, array{log: array<string, mixed>, result: string, average: ?float}>
+     */
+    private function decisionLogs(array $rules, array $state, array $board, int $played, string $status): array
     {
         $started = is_int($state['startedAt'] ?? null) ? $state['startedAt'] : time();
         $finishedAt = time();
@@ -1199,8 +1309,9 @@ final class OnlineMatchRepository
                 ],
             ];
         }
+        $winner = $status === 'finished' && is_int($state['winner'] ?? null) ? $state['winner'] : null;
         $canonical = [
-            'status' => 'finished',
+            'status' => $status === 'finished' ? 'finished' : 'abandoned',
             'config' => [
                 'mode' => 'x01',
                 'format' => $rules['format'],
@@ -1214,7 +1325,7 @@ final class OnlineMatchRepository
             ],
             'players' => $players,
             'visits' => $state['visits'],
-            'winner' => $state['winner'],
+            'winner' => $winner,
             'bullOffLegs' => [],
             'openingStarter' => 0,
         ];
@@ -1240,7 +1351,7 @@ final class OnlineMatchRepository
                 'average' => is_array($owner) ? ($owner['stats']['average'] ?? null) : null,
                 'log' => [
                     'version' => 1,
-                    'status' => 'finished',
+                    'status' => $canonical['status'],
                     'title' => $title !== '' ? $title : 'Online',
                     'startedAt' => gmdate('c', $started),
                     'finishedAt' => gmdate('c', $finishedAt),
@@ -1248,7 +1359,7 @@ final class OnlineMatchRepository
                     'config' => $canonical['config'],
                     'ghost' => null,
                     'openingStarter' => 0,
-                    'winner' => $state['winner'],
+                    'winner' => $winner,
                     'players' => $logged,
                     'legs' => $stats['legs'],
                     'visits' => $stats['visits'],
