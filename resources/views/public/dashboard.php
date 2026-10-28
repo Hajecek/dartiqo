@@ -140,9 +140,9 @@ $subtitle = match (true) {
 <?php endif; ?>
 <?php foreach ($trend as $i => $value): $isLast = $i === count($trend) - 1; ?>
 <?php if ($value === null): ?>
-<span class="flex-1 rounded-t-md bg-white/[.04]" style="height:4%" title="Bez hry"></span>
+<span class="chart-bar flex-1 rounded-t-md bg-white/[.04]" style="height:4%;--i:<?= (int) $i ?>" title="Bez hry"></span>
 <?php else: ?>
-<span class="group/bar relative flex-1 rounded-t-md transition-colors <?= $isLast ? 'bg-accent shadow-[0_0_20px_#faff0066]' : ($value === $trendMax ? 'bg-accent/70' : 'bg-white/[.08] hover:bg-white/25') ?>" style="height:<?= e((string) max(4, round(($value - $trendMin) / $trendSpan * 100, 1))) ?>%" title="<?= e((string) $value) ?>">
+<span class="chart-bar group/bar relative flex-1 rounded-t-md transition-colors <?= $isLast ? 'bg-accent shadow-[0_0_20px_#faff0066]' : ($value === $trendMax ? 'bg-accent/70' : 'bg-white/[.08] hover:bg-white/25') ?>" style="height:<?= e((string) max(4, round(($value - $trendMin) / $trendSpan * 100, 1))) ?>%;--i:<?= (int) $i ?>" title="<?= e((string) $value) ?>">
 <span class="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-zinc-950 group-hover/bar:block"><?= e((string) $value) ?></span>
 </span>
 <?php endif; ?>

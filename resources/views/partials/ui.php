@@ -119,7 +119,7 @@ if (!function_exists('dartiqo_icon')) {
         $id = 'ln' . substr(md5($line . $color), 0, 8);
         $c = e($color);
 
-        $svg = '<svg class="absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'
+        $svg = '<svg class="chart-reveal absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'
             . '<defs><linearGradient id="' . $id . '" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="' . $c . '" stop-opacity=".32"/><stop offset=".7" stop-color="' . $c . '" stop-opacity=".06"/><stop offset="1" stop-color="' . $c . '" stop-opacity="0"/></linearGradient></defs>';
         for ($g = 1; $g <= ($o['grid'] ?? 0); $g++) {
             $gy = round(100 / (($o['grid'] ?? 0) + 1) * $g, 2);
@@ -136,16 +136,17 @@ if (!function_exists('dartiqo_icon')) {
 
         $html = '<div class="relative h-full w-full">' . $svg;
         if ($ref !== null && !empty($o['refLabel'])) {
-            $html .= '<span class="pointer-events-none absolute right-0 translate-y-[3px] text-[10px] leading-none text-zinc-500" style="top:' . $toY((float) $ref) . '%">' . e($o['refLabel']) . '</span>';
+            $html .= '<span class="chart-note pointer-events-none absolute right-0 translate-y-[3px] text-[10px] leading-none text-zinc-500" style="top:' . $toY((float) $ref) . '%;--d:640">' . e($o['refLabel']) . '</span>';
         }
         if (!empty($o['peak'])) {
             $peak = (int) array_search(max($values), $values, true);
             [$px, $py] = $pts[$peak];
-            $html .= '<span class="pointer-events-none absolute size-2 -translate-1/2 rounded-full ring-2 ring-zinc-900" style="left:' . $px . '%;top:' . $py . '%;background:' . $c . '"></span>'
-                . '<span class="pointer-events-none absolute -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] leading-none font-semibold whitespace-nowrap text-zinc-200 backdrop-blur" style="left:' . min(92, max(8, $px)) . '%;top:' . $py . '%">max ' . e($values[$peak] . $unit) . '</span>';
+            $peakAt = (int) round($peak / max(1, $count - 1) * 1000);
+            $html .= '<span class="chart-dot pointer-events-none absolute size-2 -translate-1/2 rounded-full ring-2 ring-zinc-900" style="left:' . $px . '%;top:' . $py . '%;background:' . $c . ';--d:' . $peakAt . '"></span>'
+                . '<span class="chart-note pointer-events-none absolute -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] leading-none font-semibold whitespace-nowrap text-zinc-200 backdrop-blur" style="left:' . min(92, max(8, $px)) . '%;top:' . $py . '%;--d:' . $peakAt . '">max ' . e($values[$peak] . $unit) . '</span>';
         }
         [$lx, $ly] = end($pts);
-        $html .= '<span class="pointer-events-none absolute size-2.5 -translate-1/2" style="left:' . $lx . '%;top:' . $ly . '%">'
+        $html .= '<span class="chart-dot pointer-events-none absolute size-2.5 -translate-1/2" style="left:' . $lx . '%;top:' . $ly . '%;--d:980">'
             . '<i class="absolute inset-0 rounded-full opacity-60 motion-safe:animate-ping" style="background:' . $c . '"></i>'
             . '<i class="absolute inset-0 rounded-full ring-2 ring-zinc-900" style="background:' . $c . ';box-shadow:0 0 12px ' . $c . '"></i></span>';
 
@@ -183,10 +184,10 @@ if (!function_exists('dartiqo_icon')) {
             $isZero = (float) $value === 0.0;
             $height = $isZero ? 8 : max(12, round($value / $max * 100, 1));
             $style = $isZero
-                ? 'height:' . $height . '%;background:#ffffff12;--o:1'
-                : 'height:' . $height . '%;background:' . $c . ';--o:' . ($i === $last ? 1 : round(.35 + .45 * $value / $max, 2)) . ($i === $last ? ';box-shadow:0 0 14px ' . $c : '');
+                ? 'height:' . $height . '%;background:#ffffff12;--o:1;--i:' . $i
+                : 'height:' . $height . '%;background:' . $c . ';--o:' . ($i === $last ? 1 : round(.35 + .45 * $value / $max, 2)) . ';--i:' . $i . ($i === $last ? ';box-shadow:0 0 14px ' . $c : '');
             $align = $i < 2 ? 'left-0' : ($i > $last - 2 ? 'right-0' : 'left-1/2 -translate-x-1/2');
-            $html .= '<span class="group/bar relative flex-1 rounded-[4px] opacity-(--o) transition-opacity hover:opacity-100" style="' . $style . '">'
+            $html .= '<span class="chart-bar group/bar relative flex-1 rounded-[4px] opacity-(--o) transition-opacity hover:opacity-100" style="' . $style . '">'
                 . '<b class="pointer-events-none absolute bottom-full z-10 mb-1.5 hidden rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-zinc-950 group-hover/bar:block ' . $align . '">' . e($value . $unit) . '</b>'
                 . '</span>';
         }
@@ -202,7 +203,7 @@ if (!function_exists('dartiqo_icon')) {
         return '<span class="relative grid size-12 shrink-0 place-items-center" aria-hidden="true">'
             . '<svg class="absolute inset-0 size-full -rotate-90" viewBox="0 0 36 36">'
             . '<circle cx="18" cy="18" r="15.915" fill="none" stroke="#ffffff12" stroke-width="3.2"/>'
-            . '<circle cx="18" cy="18" r="15.915" fill="none" stroke="' . $c . '" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="' . $p . ' 100" style="filter:drop-shadow(0 0 3px ' . $c . ')"/>'
+            . '<circle class="chart-ring" cx="18" cy="18" r="15.915" fill="none" stroke="' . $c . '" stroke-width="3.2" stroke-linecap="round" style="--p:' . $p . ';filter:drop-shadow(0 0 3px ' . $c . ')"/>'
             . '</svg>'
             . ($inner !== '' ? '<small class="num relative text-[9px] font-semibold text-zinc-300">' . e($inner) . '</small>' : '')
             . '</span>';

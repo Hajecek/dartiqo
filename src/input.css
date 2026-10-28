@@ -304,6 +304,69 @@
 .live-pip {
   animation: live-pip 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
+@keyframes chart-reveal {
+  from {
+    clip-path: inset(-16px 100% -24px 0);
+  }
+  to {
+    clip-path: inset(-16px -8px -24px 0);
+  }
+}
+@keyframes chart-rise {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes chart-ring {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: calc(100 - var(--p, 0));
+  }
+}
+@keyframes chart-dot {
+  from {
+    opacity: 0;
+    scale: 0.2;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes chart-note {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.chart-reveal {
+  animation: chart-reveal 1.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.chart-bar {
+  transform-origin: bottom;
+  animation: chart-rise 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 16ms);
+}
+.chart-ring {
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--p, 0));
+  animation: chart-ring 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.chart-dot {
+  animation: chart-dot 0.4s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+  animation-delay: calc(var(--d, 820) * 1ms);
+}
+.chart-note {
+  animation: chart-note 0.35s ease both;
+  animation-delay: calc(var(--d, 820) * 1ms);
+}
 @keyframes dart {
   from {
     opacity: 0;
