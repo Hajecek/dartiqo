@@ -9,6 +9,7 @@ use App\Core\View;
 use App\Repositories\FriendRepository;
 use App\Repositories\MatchRepository;
 use App\Services\MatchInsights;
+use App\Services\PlayerXp;
 
 final class PageController
 {
@@ -92,9 +93,11 @@ final class PageController
     /** @param array<string, string> $params */
     public function dashboard(Request $request, array $params = []): void
     {
+        $user = auth()->user();
         $this->page('public.dashboard', 'Přehled | Dartiqo', 'app-body', 'layouts.app', [
             'insights' => $this->insights(),
             'incomingFriends' => $this->incomingFriendCount(),
+            'progress' => $user === null ? PlayerXp::progress(0) : (new PlayerXp(db()))->snapshot((int) $user['id']),
         ]);
     }
 

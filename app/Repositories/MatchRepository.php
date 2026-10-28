@@ -309,6 +309,51 @@ final class MatchRepository
     }
 
     /**
+     * Stejná bilance pro víc účtů najednou. Chybějící účet má nulu a percent null.
+     *
+     * @param list<int> $userIds
+     * @return array<int, array{completed:int,abandoned:int,percent:?float}>
+     */
+    public function completions(array $userIds): array
+    {
+        $userIds = array_values(array_unique(array_filter(
+            $userIds,
+            static fn (int $id): bool => $id > 0
+        )));
+        $empty = ['completed' => 0, 'abandoned' => 0, 'percent' => null];
+        $out = [];
+        foreach ($userIds as $id) {
+            $out[$id] = $empty;
+        }
+        if ($userIds === []) {
+            return [];
+        }
+        $placeholders = implode(', ', array_fill(0, count($userIds), '?'));
+        $rows = $this->db->fetchAll(
+            "SELECT user_id,
+                SUM(status IN ('finished', 'deleted')) AS completed,
+                SUM(status = 'abandoned') AS abandoned
+             FROM matches
+             WHERE user_id IN ({$placeholders})
+               AND JSON_EXTRACT(log, '$.version') IS NOT NULL
+             GROUP BY user_id",
+            $userIds
+        );
+        foreach ($rows as $row) {
+            $completed = (int) ($row['completed'] ?? 0);
+            $abandoned = (int) ($row['abandoned'] ?? 0);
+            $decided = $completed + $abandoned;
+            $out[(int) $row['user_id']] = [
+                'completed' => $completed,
+                'abandoned' => $abandoned,
+                'percent' => $decided > 0 ? round($completed / $decided * 100, 1) : null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * Smazání nechá dohraný zápas v tabulce se stavem deleted.
      * Rozehraný zápas bez logu se tím nesmaže.
      */

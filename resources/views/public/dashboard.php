@@ -3,7 +3,9 @@ require_once __DIR__ . '/../partials/player-games.php';
 require_once __DIR__ . '/../partials/ui.php';
 
 /** @var \App\Services\MatchInsights $insights */
+/** @var array{total:int,level:int,intoLevel:int,needed:int,rank:string} $progress */
 $dash = $insights->dashboard();
+$progress ??= \App\Services\PlayerXp::progress(0);
 $recent = $insights->cards(4);
 $form = $insights->form();
 $last = $dash['last'];
@@ -71,11 +73,11 @@ $subtitle = match (true) {
 <div class="flex items-center gap-4">
 <span class="relative shrink-0">
 <span class="grid size-16 place-items-center overflow-hidden rounded-2xl bg-accent text-xl font-bold text-black shadow-[0_10px_30px_-10px_#faff00aa] [&_img]:size-full [&_img]:object-cover" data-player-avatar></span>
-<span class="absolute -right-1.5 -bottom-1.5 grid size-7 place-items-center rounded-lg border-2 border-zinc-900 bg-zinc-100 text-[11px] font-bold text-zinc-950"><?= $dash['level'] ?></span>
+<span class="absolute -right-1.5 -bottom-1.5 grid size-7 place-items-center rounded-lg border-2 border-zinc-900 bg-zinc-100 text-[11px] font-bold text-zinc-950"><?= (int) $progress['level'] ?></span>
 </span>
 <span class="min-w-0 flex-1">
 <strong class="block truncate text-lg font-semibold" data-player-full></strong>
-<span class="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400"><span class="chip bg-accent/10 text-accent ring-1 ring-accent/25 ring-inset"><?= e($dash['rank']) ?></span><span data-player-user></span></span>
+<span class="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400"><span class="chip bg-accent/10 text-accent ring-1 ring-accent/25 ring-inset"><?= e($progress['rank']) ?></span><span data-player-user></span></span>
 </span>
 <span class="icon-btn hidden sm:grid" aria-hidden="true"><?= dartiqo_i('arrow') ?></span>
 </div>
@@ -92,8 +94,8 @@ $subtitle = match (true) {
 <div class="h-20 sm:h-24"><?= $dash['average'] === null ? '' : dartiqo_line($dash['averageLine'], '#faff00', ['ref' => round($dash['average'], 1), 'refLabel' => 'Ø ' . $fmt($dash['average']), 'peak' => true, 'grid' => 3]) ?></div>
 </div>
 <div>
-<div class="mb-2 flex items-center justify-between text-xs"><span class="text-zinc-400">Level <?= $dash['level'] ?> → <?= $dash['level'] + 1 ?></span><span class="num text-zinc-300"><?= e(number_format($dash['xp'], 0, ',', ' ')) ?> <span class="text-zinc-500">/ 1 000 XP</span></span></div>
-<div class="meter h-2"><i class="bg-gradient-to-r from-accent/60 to-accent shadow-[0_0_14px_#faff0080]" style="width:<?= e((string) round($dash['xp'] / 10, 1)) ?>%"></i></div>
+<div class="mb-2 flex items-center justify-between text-xs"><span class="text-zinc-400">Level <?= (int) $progress['level'] ?> → <?= (int) $progress['level'] + 1 ?></span><span class="num text-zinc-300"><?= e(number_format((int) $progress['intoLevel'], 0, ',', ' ')) ?> <span class="text-zinc-500">/ <?= e(number_format((int) $progress['needed'], 0, ',', ' ')) ?> XP</span></span></div>
+<div class="meter h-2"><i class="bg-gradient-to-r from-accent/60 to-accent shadow-[0_0_14px_#faff0080]" style="width:<?= e((string) ((int) $progress['needed'] === 0 ? 0 : round($progress['intoLevel'] / $progress['needed'] * 100, 1))) ?>%"></i></div>
 </div>
 </div>
 </a>
@@ -106,7 +108,7 @@ $subtitle = match (true) {
 <span class="grid size-9 place-items-center rounded-full bg-black/10 transition group-hover:bg-black group-hover:text-accent"><?= dartiqo_i('arrow', 'size-4') ?></span>
 </span>
 <span class="num mt-6 block text-6xl leading-none"><?= $tasksDone ?><span class="text-3xl opacity-40"> / 3</span></span>
-<span class="mt-2 block text-sm font-medium opacity-70"><?= $nextTask ? 'Zbývá ti ' . e($nextTask[0]) . '. +50 XP' : 'Všechny úkoly splněné.' ?></span>
+<span class="mt-2 block text-sm font-medium opacity-70"><?= $nextTask ? 'Zbývá ti ' . e($nextTask[0]) . '.' : 'Všechny úkoly splněné.' ?></span>
 <span class="mt-auto flex gap-1.5 pt-6"><?php foreach ($tasks as $task): ?><i class="h-1.5 flex-1 rounded-full <?= $task[2] ? 'bg-black' : 'bg-black/15' ?>"></i><?php endforeach; ?></span>
 </button>
 

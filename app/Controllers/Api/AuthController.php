@@ -7,6 +7,7 @@ namespace App\Controllers\Api;
 use App\Core\Request;
 use App\Repositories\MatchRepository;
 use App\Repositories\UserRepository;
+use App\Services\PlayerXp;
 use App\Services\ProfileService;
 
 final class AuthController extends ApiController
@@ -16,6 +17,7 @@ final class AuthController extends ApiController
     {
         $payload = UserRepository::toPublic($user);
         $payload['matchCompletion'] = (new MatchRepository(db()))->completion((int) $user['id']);
+        $payload['xp'] = (new PlayerXp(db()))->snapshot((int) $user['id']);
 
         return $payload;
     }

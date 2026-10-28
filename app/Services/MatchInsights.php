@@ -357,6 +357,9 @@ final class MatchInsights
 
         $stats = $mine['stats'];
         $hasBot = in_array('bot', array_column($opponents, 'kind'), true);
+        // Výhra po odchodu soupeře není dohraný X01. Ty šipky aplikace do průměru nebere.
+        $forfeit = self::awardedByForfeit($row, $log);
+        $counts = $scored && !$forfeit;
 
         return [
             'id' => (string) $row['public_id'],
@@ -376,11 +379,11 @@ final class MatchInsights
             'category' => !$versus ? 'Sám' : ($hasBot ? 'S botem' : 'S kamarády'),
             'seconds' => (int) $row['play_seconds'],
             'myVisits' => $myVisits,
-            'points' => $scored ? (int) ($stats['points'] ?? 0) : 0,
-            'darts' => $scored ? (int) ($stats['darts'] ?? 0) : 0,
-            'average' => $scored ? ($stats['average'] ?? null) : null,
+            'points' => $counts ? (int) ($stats['points'] ?? 0) : 0,
+            'darts' => $counts ? (int) ($stats['darts'] ?? 0) : 0,
+            'average' => $counts ? ($stats['average'] ?? null) : null,
             'mpr' => $stats['mpr'] ?? null,
-            'first9' => $this->first9($log['visits'], $me),
+            'first9' => $forfeit ? [0, 0] : $this->first9($log['visits'], $me),
             'scores180' => (int) ($stats['scores180'] ?? 0),
             'bestVisit' => (int) ($stats['bestVisit'] ?? 0),
             'bestCheckout' => $stats['bestCheckout'] ?? null,
@@ -421,11 +424,12 @@ final class MatchInsights
             }
         }
 
+        $matchAverage = $stats['average'] ?? $f['average'];
         $soloScore = match ($f['mode']) {
             'countUp' => (string) ($stats['points'] ?? 0),
             'aroundClock' => (string) ($stats['darts'] ?? 0),
             'cricket' => self::number($f['mpr'], 2),
-            default => self::number($f['average']),
+            default => self::number($matchAverage),
         };
         $label = match ($f['result']) {
             'win' => 'Výhra',
@@ -434,7 +438,7 @@ final class MatchInsights
             'train' => 'Dohráno',
             default => 'Nedohráno',
         };
-        $myValue = $f['mode'] === 'cricket' ? self::number($f['mpr'], 2) : ($f['scored'] ? self::number($f['average']) : (string) ($stats['darts'] ?? 0));
+        $myValue = $f['mode'] === 'cricket' ? self::number($f['mpr'], 2) : ($f['scored'] ? self::number($matchAverage) : (string) ($stats['darts'] ?? 0));
 
         return [
             'id' => $f['id'],
@@ -509,7 +513,7 @@ final class MatchInsights
                 ['Čas', $minutes, 'u terče'],
             ],
             'countUp' => array_merge(
-                [['Průměr', self::number($f['average']), 'na 3 šipky']],
+                [['Průměr', self::number($stats['average'] ?? $f['average']), 'na 3 šipky']],
                 $opp,
                 [
                     ['Body', (string) ($stats['points'] ?? 0), 'celkem'],
@@ -519,7 +523,7 @@ final class MatchInsights
                 ]
             ),
             default => array_merge(
-                [['Průměr', self::number($f['average']), 'na 3 šipky']],
+                [['Průměr', self::number($stats['average'] ?? $f['average']), 'na 3 šipky']],
                 $opp,
                 [
                     ['Prvních 9', self::number($stats['first9Average'] ?? null), 'úvodní tři kola'],
@@ -893,6 +897,38 @@ final class MatchInsights
     private function finished(array $facts): array
     {
         return array_values(array_filter($facts, static fn (array $f): bool => $f['finished']));
+    }
+
+    /**
+     * Zápas, který web označil jako výhru, protože soupeř odešel.
+     * Není v něm checkout ani limit šipek, takže do tříšipkového průměru nepatří.
+     *
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $log
+     */
+    private static function awardedByForfeit(array $row, array $log): bool
+    {
+        if (($log['forfeit'] ?? false) === true) {
+            return true;
+        }
+        $config = is_array($log['config'] ?? null) ? $log['config'] : [];
+        if (($config['mode'] ?? '') !== 'x01' || ($config['dartLimit'] ?? null) !== null) {
+            return false;
+        }
+        if (($row['status'] ?? '') !== 'finished' || ($log['winner'] ?? null) === null) {
+            return false;
+        }
+        $legs = is_array($log['legs'] ?? null) ? $log['legs'] : [];
+        if ($legs === []) {
+            return false;
+        }
+        foreach ($legs as $leg) {
+            if (in_array($leg['decidedBy'] ?? null, ['checkout', 'bullOff'], true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function best(array $facts, string $key): int|float|null

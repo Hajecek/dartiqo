@@ -14,8 +14,8 @@ use PDOException;
 use RuntimeException;
 
 /**
- * Společný online zápas. Telefon sem posílá jednu šipku, skóre a tah drží server.
- * Do matches se stav jen zrcadlí, ať živý web a statistiky zůstanou na původním řádku.
+ * Online zápas je řádek v matches. Hostitel v něm drží lobby a živý stav.
+ * Soupeř má po startu vlastní řádek, ať jeho výsledek zůstane u jeho účtu.
  */
 final class OnlineMatchRepository
 {
@@ -28,6 +28,20 @@ final class OnlineMatchRepository
 
     public function __construct(private readonly Database $db)
     {
+    }
+
+    /** @param array<string, mixed> $match @return array<string, mixed> */
+    private function hydrate(array $match): array
+    {
+        $match['host_user_id'] = (int) $match['user_id'];
+
+        return $match;
+    }
+
+    /** @param array<string, mixed> $match */
+    private function isRanked(array $match): bool
+    {
+        return (int) ($match['ranked'] ?? 0) === 1;
     }
 
     /**
@@ -60,20 +74,33 @@ final class OnlineMatchRepository
             ];
             $matchId = 0;
             for ($attempt = 0; ; $attempt++) {
+                $publicId = self::publicId();
                 try {
-                    $matchId = $db->insert('online_matches', [
-                        'public_id' => self::publicId(),
-                        'host_user_id' => $userId,
-                        'kind' => $lobby['kind'],
+                    $matchId = $db->insert('matches', [
+                        'public_id' => $publicId,
+                        'user_id' => $userId,
+                        'client_id' => $publicId,
+                        'status' => 'lobby',
+                        'seq' => 0,
+                        'mode' => 'x01',
+                        'title' => mb_substr(self::name($user), 0, 160),
+                        'player_count' => 1,
+                        'has_bot' => 0,
+                        'is_solo' => 0,
+                        'kind' => 'online',
+                        'ranked' => $lobby['kind'] === 'ranked' ? 1 : 0,
                         'visibility' => $lobby['visibility'],
                         'code' => self::lobbyCode(),
                         'password_hash' => $hash,
-                        'status' => 'lobby',
-                        'rules' => self::json($rules),
                         'active_slot' => 0,
-                        'seq' => 0,
-                        'state' => self::json($state),
+                        'result' => 'none',
+                        'darts_thrown' => 0,
+                        'play_seconds' => 0,
+                        'started_at' => gmdate('Y-m-d H:i:s', $now),
                         'expires_at' => gmdate('Y-m-d H:i:s', $now + self::LOBBY_SECONDS),
+                        'rules' => self::json($rules),
+                        'state' => self::json($state),
+                        'log' => '{}',
                     ]);
                     break;
                 } catch (PDOException $e) {
@@ -82,12 +109,6 @@ final class OnlineMatchRepository
                     }
                 }
             }
-            $db->insert('online_match_players', [
-                'online_match_id' => $matchId,
-                'user_id' => $userId,
-                'slot' => 0,
-                'ready' => 0,
-            ]);
 
             return $this->present($db, $matchId, $userId);
         });
@@ -105,7 +126,10 @@ final class OnlineMatchRepository
             $userId = (int) $user['id'];
             $this->lockUser($db, $userId);
             $this->assertNotLocked($db, $userId, $code);
-            $peek = $db->fetch('SELECT id FROM online_matches WHERE code = :code', ['code' => $code]);
+            $peek = $db->fetch(
+                'SELECT id FROM matches WHERE code = :code AND kind = \'online\' AND state IS NOT NULL',
+                ['code' => $code]
+            );
             $ids = $this->openIds($db, $userId);
             if ($peek !== null) {
                 $ids[] = (int) $peek['id'];
@@ -176,7 +200,10 @@ final class OnlineMatchRepository
         $view = $this->db->transaction(function (Database $db) use ($user, $publicId, &$error, &$notice): array {
             $userId = (int) $user['id'];
             $this->lockUser($db, $userId);
-            $peek = $db->fetch('SELECT id FROM online_matches WHERE public_id = :id', ['id' => $publicId]);
+            $peek = $db->fetch(
+                'SELECT id FROM matches WHERE public_id = :id AND kind = \'online\' AND state IS NOT NULL',
+                ['id' => $publicId]
+            );
             if ($peek === null) {
                 $error = new OnlineMatchException('Lobby už neexistuje.', 404);
 
@@ -253,11 +280,12 @@ final class OnlineMatchRepository
             $state = $this->state($match);
             foreach ($state['players'] as &$player) {
                 $player['remaining'] = $rules['startingScore'];
+                $player['ready'] = false;
             }
             unset($player);
             $state['visitStart'] = $rules['startingScore'];
-            $db->update('online_matches', [
-                'kind' => $lobby['kind'],
+            $db->update('matches', [
+                'ranked' => $lobby['kind'] === 'ranked' ? 1 : 0,
                 'visibility' => $lobby['visibility'],
                 'password_hash' => $lobby['password'] === null ? $match['password_hash'] : $hash,
                 'rules' => self::json($rules),
@@ -266,7 +294,6 @@ final class OnlineMatchRepository
                 'expires_at' => gmdate('Y-m-d H:i:s', time() + self::LOBBY_SECONDS),
                 'updated_at' => gmdate('Y-m-d H:i:s'),
             ], 'id = :id', ['id' => (int) $match['id']]);
-            $db->query('UPDATE online_match_players SET ready = 0 WHERE online_match_id = :id', ['id' => (int) $match['id']]);
 
             return $this->present($db, (int) $match['id'], $userId);
         });
@@ -284,36 +311,35 @@ final class OnlineMatchRepository
      */
     public function lobbies(int $viewerId, ?string $kind): array
     {
-        $params = ['viewer' => $viewerId, 'now' => gmdate('Y-m-d H:i:s')];
+        $params = ['viewer' => $viewerId, 'seated' => $viewerId, 'now' => gmdate('Y-m-d H:i:s')];
         $filter = '';
-        if ($kind !== null) {
-            $filter = ' AND m.kind = :kind';
-            $params['kind'] = $kind;
+        if ($kind === 'ranked') {
+            $filter .= ' AND m.ranked = 1';
+        } elseif ($kind === 'classic') {
+            $filter .= ' AND m.ranked = 0';
         }
         $rows = $this->db->fetchAll(
-            'SELECT m.public_id, m.kind, m.rules, m.created_at,
+            'SELECT m.public_id, m.ranked, m.rules, m.state, m.created_at,
                     u.public_id AS host_public_id, u.username, u.first_name, u.last_name,
-                    u.avatar_path, u.profile_revision,
-                    COALESCE(r.rating, 1000) AS rating,
-                    (SELECT COUNT(*) FROM online_match_players p WHERE p.online_match_id = m.id) AS seated
-             FROM online_matches m
-             JOIN users u ON u.id = m.host_user_id
-             LEFT JOIN online_ratings r ON r.user_id = m.host_user_id
-             WHERE m.status = \'lobby\' AND m.visibility = \'public\' AND m.expires_at > :now' . $filter . '
-               AND NOT EXISTS (
-                   SELECT 1 FROM online_match_players mine
-                   WHERE mine.online_match_id = m.id AND mine.user_id = :viewer
-               )
+                    u.avatar_path, u.profile_revision, u.rating
+             FROM matches m
+             JOIN users u ON u.id = m.user_id
+             WHERE m.kind = \'online\' AND m.state IS NOT NULL
+               AND m.status = \'lobby\' AND m.visibility = \'public\' AND m.expires_at > :now' . $filter . '
+               AND m.user_id <> :viewer
+               AND (m.guest_user_id IS NULL OR m.guest_user_id <> :seated)
              ORDER BY m.created_at DESC
              LIMIT 50',
             $params
         );
         $list = [];
         foreach ($rows as $row) {
-            $seated = (int) $row['seated'];
+            $state = json_decode((string) $row['state'], true);
+            $players = is_array($state) ? ($state['players'] ?? null) : null;
+            $seated = is_array($players) ? count($players) : 0;
             $list[] = [
                 'id' => (string) $row['public_id'],
-                'kind' => (string) $row['kind'],
+                'kind' => (int) $row['ranked'] === 1 ? 'ranked' : 'classic',
                 'rules' => $this->rules($row),
                 'host' => [
                     'name' => self::name($row),
@@ -334,10 +360,17 @@ final class OnlineMatchRepository
     /** @return array{rating:int,played:int,wins:int} */
     public function rating(int $userId): array
     {
-        $row = $this->db->fetch('SELECT rating, played, wins FROM online_ratings WHERE user_id = :user', ['user' => $userId]);
+        $user = $this->db->fetch('SELECT rating FROM users WHERE id = :user', ['user' => $userId]);
+        $row = $this->db->fetch(
+            'SELECT SUM(result = \'won\') AS wins, SUM(result IN (\'won\', \'lost\')) AS played
+             FROM matches
+             WHERE user_id = :user AND kind = \'online\' AND ranked = 1
+               AND status IN (\'finished\', \'abandoned\')',
+            ['user' => $userId]
+        );
 
         return [
-            'rating' => (int) ($row['rating'] ?? 1000),
+            'rating' => (int) ($user['rating'] ?? 1000),
             'played' => (int) ($row['played'] ?? 0),
             'wins' => (int) ($row['wins'] ?? 0),
         ];
@@ -366,16 +399,12 @@ final class OnlineMatchRepository
         $rules = $this->rules($match);
         $state = $this->state($match);
         $state['players'][] = $this->player($user, $rules['startingScore']);
-        $db->insert('online_match_players', [
-            'online_match_id' => (int) $match['id'],
-            'user_id' => $userId,
-            'slot' => 1,
-            'ready' => 0,
-        ]);
         if ($inviteId > 0) {
             $this->acceptInviteRow($db, $inviteId);
         }
-        $db->update('online_matches', [
+        $db->update('matches', [
+            'guest_user_id' => $userId,
+            'player_count' => count($state['players']),
             'state' => self::json($state),
             'seq' => (int) $match['seq'] + 1,
             'expires_at' => gmdate('Y-m-d H:i:s', time() + self::LOBBY_SECONDS),
@@ -414,7 +443,7 @@ final class OnlineMatchRepository
         if ($expires !== false && $expires > time() + self::LOBBY_SECONDS - 60) {
             return;
         }
-        $db->update('online_matches', [
+        $db->update('matches', [
             'expires_at' => gmdate('Y-m-d H:i:s', time() + self::LOBBY_SECONDS),
         ], 'id = :id', ['id' => (int) $match['id']]);
     }
@@ -428,7 +457,7 @@ final class OnlineMatchRepository
      */
     private function rate(Database $db, array $match, array $state, int $winnerSlot): array
     {
-        if (($match['kind'] ?? 'classic') !== 'ranked' || isset($state['rating'])) {
+        if (!$this->isRanked($match) || isset($state['rating'])) {
             return $state;
         }
         $ids = [];
@@ -441,12 +470,9 @@ final class OnlineMatchRepository
         }
         $sorted = array_values($ids);
         sort($sorted);
-        foreach ($sorted as $id) {
-            $db->query('INSERT IGNORE INTO online_ratings (user_id) VALUES (:user)', ['user' => $id]);
-        }
         $ratings = [];
         foreach ($sorted as $id) {
-            $row = $db->fetch('SELECT rating FROM online_ratings WHERE user_id = :user FOR UPDATE', ['user' => $id]);
+            $row = $db->fetch('SELECT rating FROM users WHERE id = :user FOR UPDATE', ['user' => $id]);
             $ratings[$id] = (int) ($row['rating'] ?? 1000);
         }
         $change = [];
@@ -458,10 +484,7 @@ final class OnlineMatchRepository
             $delta = (int) round(32 * (($won ? 1 : 0) - $expected));
             $after = max(100, min(4000, $mine + $delta));
             $change[$slot] = ['before' => $mine, 'after' => $after, 'delta' => $after - $mine];
-            $db->query(
-                'UPDATE online_ratings SET rating = :rating, played = played + 1, wins = wins + :won WHERE user_id = :user',
-                ['rating' => $after, 'won' => $won ? 1 : 0, 'user' => $id]
-            );
+            $db->query('UPDATE users SET rating = :rating WHERE id = :user', ['rating' => $after, 'user' => $id]);
         }
         $state['rating'] = $change;
 
@@ -474,13 +497,14 @@ final class OnlineMatchRepository
         return $this->db->transaction(function (Database $db) use ($userId): ?array {
             $this->lockUser($db, $userId);
             $row = $db->fetch(
-                'SELECT m.id
-                 FROM online_match_players p
-                 JOIN online_matches m ON m.id = p.online_match_id
-                 WHERE p.user_id = :user AND m.status IN (\'lobby\', \'live\')
-                 ORDER BY m.id DESC
+                'SELECT id
+                 FROM matches
+                 WHERE kind = \'online\' AND state IS NOT NULL
+                   AND status IN (\'lobby\', \'live\')
+                   AND (user_id = :host OR guest_user_id = :guest)
+                 ORDER BY id DESC
                  LIMIT 1',
-                ['user' => $userId]
+                ['host' => $userId, 'guest' => $userId]
             );
             if ($row === null) {
                 return null;
@@ -523,11 +547,15 @@ final class OnlineMatchRepository
             if ((int) $member['ready'] === $flag) {
                 return $this->present($db, (int) $match['id'], $userId);
             }
-            $db->update('online_match_players', ['ready' => $flag], 'online_match_id = :match AND user_id = :user', [
-                'match' => (int) $match['id'],
-                'user' => $userId,
-            ]);
-            $db->update('online_matches', [
+            $state = $this->state($match);
+            foreach ($state['players'] as &$player) {
+                if (is_array($player) && (int) ($player['userId'] ?? 0) === $userId) {
+                    $player['ready'] = $ready;
+                }
+            }
+            unset($player);
+            $db->update('matches', [
+                'state' => self::json($state),
                 'seq' => (int) $match['seq'] + 1,
                 'updated_at' => gmdate('Y-m-d H:i:s'),
             ], 'id = :id', ['id' => (int) $match['id']]);
@@ -696,11 +724,12 @@ final class OnlineMatchRepository
             $this->lockUser($db, $userId);
             $match = $this->requireMatch($db, $publicId);
             $member = $this->requireMember($this->players($db, (int) $match['id']), $userId);
+            $state = $this->state($match);
+            if (($state['forfeit'] ?? false) === true || $match['status'] === 'abandoned') {
+                return $this->present($db, (int) $match['id'], $userId);
+            }
             if ($match['status'] === 'finished') {
                 throw new OnlineMatchException('Zápas už skončil.', 409, null, $this->present($db, (int) $match['id'], $userId));
-            }
-            if ($match['status'] === 'abandoned') {
-                return $this->present($db, (int) $match['id'], $userId);
             }
             if ($match['status'] === 'lobby' && (int) $member['slot'] !== 0) {
                 $this->removePlayer($db, $match, $userId);
@@ -714,11 +743,14 @@ final class OnlineMatchRepository
                 return $this->present($db, (int) $match['id'], $userId);
             }
             $wasLive = $match['status'] === 'live';
-            $forfeit = $wasLive && ($match['kind'] ?? 'classic') === 'ranked' && !$this->stale($match);
-            $state = $this->state($match);
+            $forfeit = $wasLive && $this->isRanked($match) && !$this->stale($match);
             if ($forfeit) {
                 $state = $this->rate($db, $match, $state, 1 - (int) $member['slot']);
-                $db->update('online_matches', ['state' => self::json($state)], 'id = :id', ['id' => (int) $match['id']]);
+            }
+            if ($wasLive) {
+                // Sloupec status pak drží výsledek hostitele. Klient pořád vidí abandoned.
+                $state['forfeit'] = true;
+                $db->update('matches', ['state' => self::json($state)], 'id = :id', ['id' => (int) $match['id']]);
             }
             $this->markAbandoned($db, (int) $match['id'], (int) $match['seq']);
             if ($wasLive) {
@@ -774,14 +806,14 @@ final class OnlineMatchRepository
             }
             $now = gmdate('Y-m-d H:i:s');
             $existing = $db->fetch(
-                'SELECT id, status FROM online_invites WHERE online_match_id = :match AND invitee_id = :user FOR UPDATE',
+                'SELECT id, status FROM online_invites WHERE match_id = :match AND invitee_id = :user FOR UPDATE',
                 ['match' => (int) $match['id'], 'user' => $friendId]
             );
             $fresh = false;
             if ($existing === null) {
                 try {
                     $db->insert('online_invites', [
-                        'online_match_id' => (int) $match['id'],
+                        'match_id' => (int) $match['id'],
                         'inviter_id' => $userId,
                         'invitee_id' => $friendId,
                         'status' => 'pending',
@@ -802,7 +834,7 @@ final class OnlineMatchRepository
                 $fresh = true;
             }
             if ($fresh) {
-                $db->update('online_matches', [
+                $db->update('matches', [
                     'seq' => (int) $match['seq'] + 1,
                     'updated_at' => $now,
                 ], 'id = :id', ['id' => (int) $match['id']]);
@@ -830,7 +862,7 @@ final class OnlineMatchRepository
         $invite = $this->db->fetch(
             'SELECT i.id, i.inviter_id, m.code
              FROM online_invites i
-             JOIN online_matches m ON m.id = i.online_match_id
+             JOIN matches m ON m.id = i.match_id
              WHERE i.id = :id AND i.invitee_id = :user AND i.status = \'pending\'',
             ['id' => $inviteId, 'user' => (int) $user['id']]
         );
@@ -859,10 +891,10 @@ final class OnlineMatchRepository
     public function incoming(int $userId): array
     {
         $rows = $this->db->fetchAll(
-            'SELECT i.id, m.public_id, m.code, m.rules, m.kind,
+            'SELECT i.id, m.public_id, m.code, m.rules, m.ranked,
                     u.public_id AS user_public_id, u.username, u.first_name, u.last_name
              FROM online_invites i
-             JOIN online_matches m ON m.id = i.online_match_id
+             JOIN matches m ON m.id = i.match_id
              JOIN users u ON u.id = i.inviter_id
              WHERE i.invitee_id = :user AND i.status = \'pending\' AND m.status = \'lobby\' AND m.code IS NOT NULL
              ORDER BY i.id DESC',
@@ -875,7 +907,7 @@ final class OnlineMatchRepository
                 'id' => (int) $row['id'],
                 'matchId' => (string) $row['public_id'],
                 'code' => (string) $row['code'],
-                'kind' => (string) $row['kind'],
+                'kind' => (int) $row['ranked'] === 1 ? 'ranked' : 'classic',
                 'startingScore' => (int) (is_array($rules) ? ($rules['startingScore'] ?? 501) : 501),
                 'outRule' => (string) (is_array($rules) ? ($rules['outRule'] ?? 'double') : 'double'),
                 'legsToWin' => (int) (is_array($rules) ? ($rules['legsToWin'] ?? 1) : 1),
@@ -897,12 +929,12 @@ final class OnlineMatchRepository
         $rows = $this->db->fetchAll(
             'SELECT i.status, u.username, u.first_name, u.last_name, u.public_id
              FROM online_invites i
-             JOIN online_matches m ON m.id = i.online_match_id
-             JOIN online_match_players p ON p.online_match_id = m.id AND p.user_id = :viewer
+             JOIN matches m ON m.id = i.match_id
              JOIN users u ON u.id = i.invitee_id
-             WHERE m.public_id = :id
+             WHERE m.public_id = :id AND m.state IS NOT NULL
+               AND (m.user_id = :viewer OR m.guest_user_id = :seated)
              ORDER BY i.id',
-            ['viewer' => $userId, 'id' => $publicId]
+            ['viewer' => $userId, 'seated' => $userId, 'id' => $publicId]
         );
         $list = [];
         foreach ($rows as $row) {
@@ -925,23 +957,29 @@ final class OnlineMatchRepository
     /** @return array<string, mixed> */
     private function requireMatch(Database $db, string $publicId): array
     {
-        $match = $db->fetch('SELECT * FROM online_matches WHERE public_id = :id FOR UPDATE', ['id' => $publicId]);
+        $match = $db->fetch(
+            'SELECT * FROM matches WHERE public_id = :id AND kind = \'online\' AND state IS NOT NULL FOR UPDATE',
+            ['id' => $publicId]
+        );
         if ($match === null) {
             throw new OnlineMatchException('Zápas nenalezen.', 404);
         }
 
-        return $match;
+        return $this->hydrate($match);
     }
 
     /** @return array<string, mixed> */
     private function lockId(Database $db, int $id): array
     {
-        $match = $db->fetch('SELECT * FROM online_matches WHERE id = :id FOR UPDATE', ['id' => $id]);
+        $match = $db->fetch(
+            'SELECT * FROM matches WHERE id = :id AND kind = \'online\' AND state IS NOT NULL FOR UPDATE',
+            ['id' => $id]
+        );
         if ($match === null) {
             throw new OnlineMatchException('Zápas nenalezen.', 404);
         }
 
-        return $match;
+        return $this->hydrate($match);
     }
 
     /**
@@ -977,12 +1015,13 @@ final class OnlineMatchRepository
     private function openIds(Database $db, int $userId): array
     {
         return array_map('intval', array_column($db->fetchAll(
-            'SELECT m.id
-             FROM online_match_players p
-             JOIN online_matches m ON m.id = p.online_match_id
-             WHERE p.user_id = :user AND m.status IN (\'lobby\', \'live\')
-             ORDER BY m.id',
-            ['user' => $userId]
+            'SELECT id
+             FROM matches
+             WHERE kind = \'online\' AND state IS NOT NULL
+               AND status IN (\'lobby\', \'live\')
+               AND (user_id = :host OR guest_user_id = :guest)
+             ORDER BY id',
+            ['host' => $userId, 'guest' => $userId]
         ), 'id'));
     }
 
@@ -998,9 +1037,12 @@ final class OnlineMatchRepository
         sort($ids);
         $locked = [];
         foreach ($ids as $id) {
-            $row = $db->fetch('SELECT * FROM online_matches WHERE id = :id FOR UPDATE', ['id' => $id]);
+            $row = $db->fetch(
+                'SELECT * FROM matches WHERE id = :id AND kind = \'online\' AND state IS NOT NULL FOR UPDATE',
+                ['id' => $id]
+            );
             if ($row !== null) {
-                $locked[(int) $row['id']] = $row;
+                $locked[(int) $row['id']] = $this->hydrate($row);
             }
         }
 
@@ -1044,16 +1086,14 @@ final class OnlineMatchRepository
     /** @param array<string, mixed> $match */
     private function removePlayer(Database $db, array $match, int $userId): void
     {
-        $db->query(
-            'DELETE FROM online_match_players WHERE online_match_id = :id AND user_id = :user',
-            ['id' => (int) $match['id'], 'user' => $userId]
-        );
         $state = $this->state($match);
         $state['players'] = array_values(array_filter(
             $state['players'],
             static fn (mixed $player): bool => is_array($player) && (int) ($player['userId'] ?? 0) !== $userId
         ));
-        $db->update('online_matches', [
+        $db->update('matches', [
+            'guest_user_id' => null,
+            'player_count' => count($state['players']),
             'state' => self::json($state),
             'seq' => (int) $match['seq'] + 1,
             'updated_at' => gmdate('Y-m-d H:i:s'),
@@ -1062,7 +1102,7 @@ final class OnlineMatchRepository
 
     private function markAbandoned(Database $db, int $id, int $seq): void
     {
-        $db->update('online_matches', [
+        $db->update('matches', [
             'status' => 'abandoned',
             'code' => null,
             'seq' => $seq + 1,
@@ -1101,7 +1141,7 @@ final class OnlineMatchRepository
             $data['started_at'] = $startedAt;
             $data['expires_at'] = null;
         }
-        $db->update('online_matches', $data, 'id = :id', ['id' => (int) $match['id']]);
+        $db->update('matches', $data, 'id = :id', ['id' => (int) $match['id']]);
     }
 
     /**
@@ -1112,8 +1152,8 @@ final class OnlineMatchRepository
     private function mirror(Database $db, array $match, array $rules, array $state, string $status): void
     {
         $rows = $db->fetchAll(
-            'SELECT id, user_id FROM matches WHERE online_match_id = :id FOR UPDATE',
-            ['id' => (int) $match['id']]
+            'SELECT id, user_id FROM matches WHERE client_id = :client AND kind = \'online\' FOR UPDATE',
+            ['client' => (string) $match['public_id']]
         );
         $byUser = [];
         foreach ($rows as $row) {
@@ -1173,8 +1213,8 @@ final class OnlineMatchRepository
         }
         $state['winner'] = 1 - $quitterSlot;
         $rows = $db->fetchAll(
-            'SELECT id, user_id FROM matches WHERE online_match_id = :id FOR UPDATE',
-            ['id' => (int) $match['id']]
+            'SELECT id, user_id FROM matches WHERE client_id = :client AND kind = \'online\' FOR UPDATE',
+            ['client' => (string) $match['public_id']]
         );
         $byUser = [];
         foreach ($rows as $row) {
@@ -1183,8 +1223,8 @@ final class OnlineMatchRepository
         $board = $this->board($rules, $state, 'abandoned', (int) $match['active_slot']);
         $now = gmdate('Y-m-d H:i:s');
         $played = $this->played($state);
-        $abandoned = $this->decisionLogs($rules, $state, $board, $played, 'abandoned');
-        $finished = $this->decisionLogs($rules, $state, $board, $played, 'finished');
+        $abandoned = $this->decisionLogs($rules, $state, $board, $played, 'abandoned', true);
+        $finished = $this->decisionLogs($rules, $state, $board, $played, 'finished', true);
         $darts = array_sum(array_map(static fn (array $player): int => (int) ($player['darts'] ?? 0), $state['players']));
         $title = mb_substr((string) ($state['title'] ?? 'Online'), 0, 160);
 
@@ -1237,6 +1277,7 @@ final class OnlineMatchRepository
             'status' => $status,
             'seq' => (int) $match['seq'],
             'kind' => 'online',
+            'ranked' => $this->isRanked($match) ? 1 : 0,
             'mode' => 'x01',
             'title' => $title !== '' ? $title : 'Online',
             'player_count' => count($state['players']),
@@ -1261,7 +1302,6 @@ final class OnlineMatchRepository
                     'public_id' => self::publicId(),
                     'user_id' => $userId,
                     'client_id' => (string) $match['public_id'],
-                    'online_match_id' => (int) $match['id'],
                     'started_at' => gmdate('Y-m-d H:i:s', is_int($state['startedAt'] ?? null) ? $state['startedAt'] : time()),
                 ]);
                 break;
@@ -1285,7 +1325,7 @@ final class OnlineMatchRepository
      * @param array<string, mixed> $board
      * @return array<int, array{log: array<string, mixed>, result: string, average: ?float}>
      */
-    private function decisionLogs(array $rules, array $state, array $board, int $played, string $status): array
+    private function decisionLogs(array $rules, array $state, array $board, int $played, string $status, bool $forfeit = false): array
     {
         $started = is_int($state['startedAt'] ?? null) ? $state['startedAt'] : time();
         $finishedAt = time();
@@ -1346,27 +1386,31 @@ final class OnlineMatchRepository
                 }
                 $logged[] = $statPlayer;
             }
+            $entry = [
+                'version' => 1,
+                'status' => $canonical['status'],
+                'title' => $title !== '' ? $title : 'Online',
+                'startedAt' => gmdate('c', $started),
+                'finishedAt' => gmdate('c', $finishedAt),
+                'playSeconds' => $played,
+                'config' => $canonical['config'],
+                'ghost' => null,
+                'openingStarter' => 0,
+                'winner' => $winner,
+                'players' => $logged,
+                'legs' => $stats['legs'],
+                'visits' => $stats['visits'],
+                'app' => ['version' => null, 'device' => null],
+                'raw' => null,
+                'board' => $board,
+            ];
+            if ($forfeit) {
+                $entry['forfeit'] = true;
+            }
             $logs[$userId] = [
                 'result' => is_array($owner) ? (string) ($owner['result'] ?? 'none') : 'none',
-                'average' => is_array($owner) ? ($owner['stats']['average'] ?? null) : null,
-                'log' => [
-                    'version' => 1,
-                    'status' => $canonical['status'],
-                    'title' => $title !== '' ? $title : 'Online',
-                    'startedAt' => gmdate('c', $started),
-                    'finishedAt' => gmdate('c', $finishedAt),
-                    'playSeconds' => $played,
-                    'config' => $canonical['config'],
-                    'ghost' => null,
-                    'openingStarter' => 0,
-                    'winner' => $winner,
-                    'players' => $logged,
-                    'legs' => $stats['legs'],
-                    'visits' => $stats['visits'],
-                    'app' => ['version' => null, 'device' => null],
-                    'raw' => null,
-                    'board' => $board,
-                ],
+                'average' => $forfeit ? null : (is_array($owner) ? ($owner['stats']['average'] ?? null) : null),
+                'log' => $entry,
             ];
         }
 
@@ -1456,7 +1500,7 @@ final class OnlineMatchRepository
     {
         $match = $this->lockId($db, $matchId);
 
-        return $this->view($match, $this->players($db, $matchId), $this->rules($match), $this->state($match), $userId);
+        return $this->view($db, $match, $this->players($db, $matchId), $this->rules($match), $this->state($match), $userId);
     }
 
     /**
@@ -1466,7 +1510,7 @@ final class OnlineMatchRepository
      * @param array<string, mixed> $state
      * @return array<string, mixed>
      */
-    private function view(array $match, array $players, array $rules, array $state, int $viewerId): array
+    private function view(Database $db, array $match, array $players, array $rules, array $state, int $viewerId): array
     {
         $scores = [];
         foreach ($state['players'] as $player) {
@@ -1475,9 +1519,14 @@ final class OnlineMatchRepository
             }
         }
         $mine = $this->member($players, $viewerId);
+        $completion = (new MatchRepository($db))->completions(array_map(
+            static fn (array $player): int => (int) $player['user_id'],
+            $players
+        ));
         $listed = [];
         foreach ($players as $player) {
             $score = $scores[(int) $player['user_id']] ?? null;
+            $userId = (int) $player['user_id'];
             $listed[] = [
                 'slot' => (int) $player['slot'],
                 'id' => (string) $player['user_public_id'],
@@ -1485,11 +1534,12 @@ final class OnlineMatchRepository
                 'username' => (string) $player['username'],
                 'photo' => self::photo($player),
                 'ready' => (int) $player['ready'] === 1,
-                'you' => (int) $player['user_id'] === $viewerId,
+                'you' => $userId === $viewerId,
                 'remaining' => (int) (is_array($score) ? $score['remaining'] : $rules['startingScore']),
                 'legs' => (int) (is_array($score) ? $score['legs'] : 0),
                 'sets' => (int) (is_array($score) ? ($score['sets'] ?? 0) : 0),
                 'rating' => (int) $player['rating'],
+                'matchCompletion' => $completion[$userId] ?? ['completed' => 0, 'abandoned' => 0, 'percent' => null],
             ];
         }
         $slot = $mine === null ? null : (int) $mine['slot'];
@@ -1499,10 +1549,10 @@ final class OnlineMatchRepository
         return [
             'id' => (string) $match['public_id'],
             'code' => $match['code'] !== null ? (string) $match['code'] : null,
-            'kind' => (string) ($match['kind'] ?? 'classic'),
+            'kind' => $this->isRanked($match) ? 'ranked' : 'classic',
             'visibility' => (string) ($match['visibility'] ?? 'private'),
             'ratingChange' => $change,
-            'status' => (string) $match['status'],
+            'status' => ($state['forfeit'] ?? false) === true ? 'abandoned' : (string) $match['status'],
             'seq' => (int) $match['seq'],
             'yourSlot' => $slot,
             'activeSlot' => (int) $match['active_slot'],
@@ -1522,17 +1572,54 @@ final class OnlineMatchRepository
      */
     private function players(Database $db, int $matchId): array
     {
-        return $db->fetchAll(
-            'SELECT p.user_id, p.slot, p.ready, u.public_id AS user_public_id, u.username, u.first_name, u.last_name,
-                    u.avatar_path, u.profile_revision,
-                    COALESCE(r.rating, 1000) AS rating
-             FROM online_match_players p
-             JOIN users u ON u.id = p.user_id
-             LEFT JOIN online_ratings r ON r.user_id = p.user_id
-             WHERE p.online_match_id = :id
-             ORDER BY p.slot',
-            ['id' => $matchId]
-        );
+        $match = $db->fetch('SELECT state FROM matches WHERE id = :id', ['id' => $matchId]);
+        $state = json_decode((string) ($match['state'] ?? ''), true);
+        if (!is_array($state) || !is_array($state['players'] ?? null)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($state['players'] as $player) {
+            if (is_array($player)) {
+                $ids[] = (int) ($player['userId'] ?? 0);
+            }
+        }
+        $ids = array_values(array_filter($ids, static fn (int $id): bool => $id > 0));
+        if ($ids === []) {
+            return [];
+        }
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $users = [];
+        foreach ($db->fetchAll(
+            "SELECT id, public_id, username, first_name, last_name, avatar_path, profile_revision, rating
+             FROM users WHERE id IN ({$placeholders})",
+            $ids
+        ) as $user) {
+            $users[(int) $user['id']] = $user;
+        }
+        $listed = [];
+        foreach ($state['players'] as $slot => $player) {
+            if (!is_array($player)) {
+                continue;
+            }
+            $user = $users[(int) ($player['userId'] ?? 0)] ?? null;
+            if ($user === null) {
+                continue;
+            }
+            $listed[] = [
+                'user_id' => (int) $user['id'],
+                'slot' => (int) $slot,
+                'ready' => ($player['ready'] ?? false) === true ? 1 : 0,
+                'user_public_id' => (string) $user['public_id'],
+                'username' => (string) $user['username'],
+                'first_name' => (string) $user['first_name'],
+                'last_name' => (string) $user['last_name'],
+                'avatar_path' => $user['avatar_path'],
+                'profile_revision' => (int) $user['profile_revision'],
+                'rating' => (int) $user['rating'],
+            ];
+        }
+
+        return $listed;
     }
 
     /**
@@ -1617,6 +1704,7 @@ final class OnlineMatchRepository
             'darts' => 0,
             'points' => 0,
             'last' => null,
+            'ready' => false,
         ];
     }
 
@@ -1639,7 +1727,7 @@ final class OnlineMatchRepository
         }
         $row = $db->fetch(
             'SELECT id FROM online_invites
-             WHERE id = :id AND invitee_id = :user AND online_match_id = :match AND status = \'pending\'
+             WHERE id = :id AND invitee_id = :user AND match_id = :match AND status = \'pending\'
              FOR UPDATE',
             ['id' => $inviteId, 'user' => $userId, 'match' => $matchId]
         );
