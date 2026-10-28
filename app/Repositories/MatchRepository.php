@@ -254,10 +254,11 @@ final class MatchRepository
     {
         $this->deleteAbandoned($userId);
         $rows = $this->db->fetchAll(
-            'SELECT public_id, status, mode, title, is_solo, result, average, play_seconds, started_at, finished_at,
+            'SELECT public_id, status, kind, mode, title, is_solo, result, average, play_seconds, started_at, finished_at,
                     JSON_REMOVE(log, \'$.board\') AS log
              FROM matches
-             WHERE user_id = :user AND status = \'finished\' AND JSON_EXTRACT(log, \'$.version\') IS NOT NULL
+             WHERE user_id = :user AND JSON_EXTRACT(log, \'$.version\') IS NOT NULL
+               AND (status = \'finished\' OR (kind = \'online\' AND status = \'abandoned\' AND play_seconds > 0))
              ORDER BY started_at DESC, id DESC',
             ['user' => $userId]
         );
@@ -266,6 +267,119 @@ final class MatchRepository
         }
 
         return $rows;
+    }
+
+    /**
+     * Online zápasy pro historii v telefonu. Id je společné client_id hostitele,
+     * aby se import nestrefil s místní kopií po odchodu ze hry.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function onlineForPhone(int $userId): array
+    {
+        $rows = $this->db->fetchAll(
+            'SELECT client_id, status, play_seconds, started_at, finished_at, log
+             FROM matches
+             WHERE user_id = :user AND kind = \'online\'
+               AND status IN (\'finished\', \'abandoned\')
+               AND play_seconds > 0
+               AND JSON_EXTRACT(log, \'$.version\') IS NOT NULL
+             ORDER BY started_at DESC, id DESC
+             LIMIT 200',
+            ['user' => $userId]
+        );
+        $out = [];
+        foreach ($rows as $row) {
+            $log = json_decode((string) $row['log'], true);
+            if (!is_array($log)) {
+                continue;
+            }
+            $client = strtolower((string) ($row['client_id'] ?? ''));
+            if ($client === '') {
+                continue;
+            }
+            $config = is_array($log['config'] ?? null) ? $log['config'] : [];
+            $players = [];
+            foreach (is_array($log['players'] ?? null) ? $log['players'] : [] as $player) {
+                if (!is_array($player)) {
+                    continue;
+                }
+                $final = is_array($player['final'] ?? null) ? $player['final'] : [];
+                $players[] = [
+                    'id' => (string) ($player['id'] ?? ''),
+                    'name' => (string) ($player['name'] ?? 'Hráč'),
+                    'you' => ($player['kind'] ?? '') === 'owner',
+                    'legs' => (int) ($player['legsWon'] ?? 0),
+                    'sets' => (int) ($player['setsWon'] ?? 0),
+                    'remaining' => (int) ($final['remaining'] ?? ($config['startingScore'] ?? 501)),
+                ];
+            }
+            if (count($players) < 2 || count($players) > 4) {
+                continue;
+            }
+            $visits = [];
+            foreach (is_array($log['visits'] ?? null) ? $log['visits'] : [] as $visit) {
+                if (!is_array($visit)) {
+                    continue;
+                }
+                $labels = [];
+                foreach (is_array($visit['darts'] ?? null) ? $visit['darts'] : [] as $label) {
+                    $labels[] = (string) $label;
+                }
+                $visits[] = [
+                    'player' => (int) ($visit['player'] ?? 0),
+                    'leg' => (int) ($visit['leg'] ?? 1),
+                    'darts' => $labels,
+                    'score' => (int) ($visit['score'] ?? 0),
+                    'bust' => ($visit['bust'] ?? false) === true,
+                    'checkout' => ($visit['checkout'] ?? false) === true,
+                    'remaining' => (int) ($visit['after'] ?? 0),
+                ];
+            }
+            $abandoned = ($row['status'] ?? '') === 'abandoned';
+            $winner = is_int($log['winner'] ?? null) ? $log['winner'] : null;
+            $started = strtotime((string) $row['started_at'] . ' UTC') ?: time();
+            $finishedRaw = $row['finished_at'] ?? null;
+            $finished = is_string($finishedRaw) && $finishedRaw !== '' ? strtotime($finishedRaw . ' UTC') : false;
+            $out[] = [
+                'id' => $client,
+                'forfeit' => $abandoned || ($log['forfeit'] ?? false) === true || self::legacyOnlineForfeit($row, $log),
+                'finished' => !$abandoned,
+                'playSeconds' => (int) $row['play_seconds'],
+                'startedAt' => gmdate('c', $started),
+                'finishedAt' => $finished !== false ? gmdate('c', $finished) : null,
+                'startingScore' => (int) ($config['startingScore'] ?? 501),
+                'outRule' => (string) ($config['outRule'] ?? 'double'),
+                'doubleIn' => ($config['doubleIn'] ?? false) === true,
+                'legsToWin' => (int) ($config['legsToWin'] ?? 1),
+                'setsToWin' => (int) ($config['setsToWin'] ?? 1),
+                'format' => (string) ($config['format'] ?? 'firstTo'),
+                'winner' => $abandoned ? null : $winner,
+                'players' => $players,
+                'visits' => $visits,
+            ];
+        }
+
+        return $out;
+    }
+
+    /** @param array<string, mixed> $row @param array<string, mixed> $log */
+    private static function legacyOnlineForfeit(array $row, array $log): bool
+    {
+        if (($row['status'] ?? '') !== 'finished' || ($log['winner'] ?? null) === null) {
+            return false;
+        }
+        $config = is_array($log['config'] ?? null) ? $log['config'] : [];
+        if (($config['mode'] ?? '') !== 'x01' || ($config['dartLimit'] ?? null) !== null) {
+            return false;
+        }
+        foreach (is_array($log['legs'] ?? null) ? $log['legs'] : [] as $leg) {
+            if (in_array($leg['decidedBy'] ?? null, ['checkout', 'bullOff'], true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

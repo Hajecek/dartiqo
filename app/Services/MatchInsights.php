@@ -25,7 +25,7 @@ final class MatchInsights
         [3, '3–4', '#4dd984'], [1, '1–2', '#5b86e5'], [0, 'bez značky', '#8e8e93'],
     ];
     private const HIT_BANDS = [[3, '3 trefy', '#4dd984'], [2, '2 trefy', '#f5c518'], [1, '1 trefa', '#5b86e5'], [0, 'vedle', '#8e8e93']];
-    private const TIME_COLORS = ['Sám' => '#fefc03', 'S botem' => '#4dd984', 'S kamarády' => '#5b86e5'];
+    private const TIME_COLORS = ['Sám' => '#fefc03', 'S botem' => '#4dd984', 'S kamarády' => '#5b86e5', 'Online' => '#38bdf8'];
     private const PERIODS = ['Dnes' => 0, '7 dní' => 7, '30 dní' => 30, 'Celé období' => 9999];
 
     /** @var list<array<string, mixed>> */
@@ -274,7 +274,9 @@ final class MatchInsights
         $mine = $players[$me];
 
         $started = (new DateTimeImmutable((string) $row['started_at'], new DateTimeZone('UTC')))->setTimezone(new DateTimeZone(self::TIMEZONE));
+        $online = ($row['kind'] ?? '') === 'online';
         $result = match (true) {
+            $online && $row['status'] === 'abandoned' => 'quit',
             $row['status'] !== 'finished' => 'none',
             !$versus => 'train',
             $mine['result'] === 'won' => 'win',
@@ -376,7 +378,8 @@ final class MatchInsights
             'date' => $started->format('Y-m-d'),
             'days' => (int) $this->today->diff($started->setTime(0, 0))->days,
             'finished' => $row['status'] === 'finished',
-            'category' => !$versus ? 'Sám' : ($hasBot ? 'S botem' : 'S kamarády'),
+            'online' => $online,
+            'category' => $online ? 'Online' : (!$versus ? 'Sám' : ($hasBot ? 'S botem' : 'S kamarády')),
             'seconds' => (int) $row['play_seconds'],
             'myVisits' => $myVisits,
             'points' => $counts ? (int) ($stats['points'] ?? 0) : 0,
@@ -436,6 +439,7 @@ final class MatchInsights
             'loss' => 'Prohra',
             'draw' => 'Remíza',
             'train' => 'Dohráno',
+            'quit' => 'Vzdáno',
             default => 'Nedohráno',
         };
         $myValue = $f['mode'] === 'cricket' ? self::number($f['mpr'], 2) : ($f['scored'] ? self::number($matchAverage) : (string) ($stats['darts'] ?? 0));
@@ -450,6 +454,7 @@ final class MatchInsights
                 default => 'Count Up',
             },
             'kind' => $f['mode'],
+            'online' => $f['online'],
             'tone' => match (true) {
                 $f['mode'] === 'cricket' => 'cricket',
                 !$f['versus'] => 'train',
@@ -457,14 +462,15 @@ final class MatchInsights
                 default => 'friend',
             },
             'title' => $this->opponentLine($f),
-            'meta' => $this->dayLabel($f['started'], $f['days']) . ' · ' . $f['started']->format('G:i') . ' · ' . $this->ruleLine($config),
+            'meta' => $this->dayLabel($f['started'], $f['days']) . ' · ' . $f['started']->format('G:i') . ' · ' . $this->ruleLine($config)
+                . ($f['online'] && $f['seconds'] > 0 ? ' · ' . self::played($f['seconds']) : ''),
             'score' => $f['versus'] ? $myScore . ' : ' . $oppScore : $soloScore,
             'avg' => $myValue,
             'oppAvg' => $bestOpp === null ? '' : self::number($bestOpp[1], $f['mode'] === 'cricket' ? 2 : 1),
             'result' => $f['result'],
             'label' => $label,
             'format' => (string) $log['title'],
-            'place' => match (true) {
+            'place' => $f['online'] ? 'Online' : match (true) {
                 !$f['versus'] => 'Sám',
                 $f['category'] === 'S botem' => 'S botem',
                 count($opponents) > 1 => 'S kamarády',
@@ -648,11 +654,23 @@ final class MatchInsights
                     $bands[$i] += $count;
                 }
             }
-            $time[$f['category']] += (int) round($f['seconds'] / 60);
+            $time[$f['category']] += $f['seconds'];
             if ($f['versus']) {
                 $legsWon += $f['legsWon'];
                 $legsPlayed += $f['legsPlayed'];
             }
+        }
+        foreach ($this->facts as $f) {
+            if ($f['finished'] || !$f['online'] || $f['seconds'] <= 0) {
+                continue;
+            }
+            $inRange = $days === 0 ? $f['days'] === 0 : $f['days'] < max(1, $days);
+            if ($inRange) {
+                $time[$f['category']] += $f['seconds'];
+            }
+        }
+        foreach ($time as $label => $seconds) {
+            $time[$label] = (int) round($seconds / 60);
         }
 
         $form = [];
@@ -963,6 +981,15 @@ final class MatchInsights
             $label === '25' => [25, 1, 25],
             default => [(int) substr($label, 1), ['S' => 1, 'D' => 2, 'T' => 3][$label[0]] ?? 1, (int) substr($label, 1) * (['S' => 1, 'D' => 2, 'T' => 3][$label[0]] ?? 1)],
         };
+    }
+
+    private static function played(int $seconds): string
+    {
+        if ($seconds < 60) {
+            return '<1 min';
+        }
+
+        return (int) round($seconds / 60) . ' min';
     }
 
     private static function number(int|float|null $value, int $decimals = 1): string

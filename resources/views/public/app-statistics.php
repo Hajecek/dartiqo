@@ -208,7 +208,7 @@ $timeShare = static fn (int $m): int => $timeTotal ? (int) round($m / $timeTotal
 <article class="panel">
 <span class="pointer-events-none absolute -right-20 -bottom-24 size-72 rounded-full bg-accent/[.06] blur-3xl" aria-hidden="true"></span>
 <div class="relative mb-6 flex flex-wrap items-start justify-between gap-3">
-<div><p class="eyebrow">Čas u terče</p><h3 class="mt-1">Jak hraješ</h3><p class="mt-1 text-xs text-zinc-500">Kolik času trávíš sám, s botem a s kamarády.</p></div>
+<div><p class="eyebrow">Čas u terče</p><h3 class="mt-1">Jak hraješ</h3><p class="mt-1 text-xs text-zinc-500">Sám, s botem, s kamarády a online. Online má vlastní barvu.</p></div>
 <span class="chip bg-white/[.06] text-zinc-300">Ø <b id="time-daily" class="text-zinc-100"><?= e($minutes($timeDaily)) ?></b> denně</span>
 </div>
 <div class="relative grid items-center gap-6 @3xl/dash:grid-cols-[13rem_1fr] @3xl/dash:gap-10">
@@ -260,7 +260,7 @@ $milesDone = count(array_filter($miles, static fn (array $m): bool => $m[1]));
 <?php endforeach; ?>
 </div>
 </div>
-<p class="mt-6 text-xs text-zinc-600">Statistiky z dohraných zápasů z aplikace. Jednotlivé zápasy jsou v Moje hry.</p>
+<p class="mt-6 text-xs text-zinc-600">Průměr je z dohraných zápasů. Čas u terče počítá i online, včetně vzdání. Jednotlivé zápasy jsou v Moje hry.</p>
 </section>
 </main>
 

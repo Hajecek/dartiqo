@@ -514,6 +514,14 @@ if (!function_exists('dartiqo_games')) {
                 'wash' => 'from-rose-400/20',
                 'soft' => 'bg-rose-400/10 text-rose-300 ring-1 ring-inset ring-rose-400/25',
             ],
+            'quit' => [
+                'mark' => '–',
+                'tile' => 'bg-sky-400 text-black',
+                'text' => 'text-sky-300',
+                'bar' => 'bg-sky-400',
+                'wash' => 'from-sky-400/25',
+                'soft' => 'bg-sky-400/15 text-sky-200 ring-1 ring-inset ring-sky-400/40',
+            ],
             'draw' => [
                 'mark' => 'R',
                 'tile' => 'bg-amber-300 text-black',

@@ -23,6 +23,17 @@ final class MatchController extends ApiController
         $this->json(['ok' => true, 'ids' => (new MatchRepository(db()))->clientIds((int) $user['id'])]);
     }
 
+    /**
+     * Online zápasy účtu, včetně vzdání. Aplikace je ukáže ve své historii.
+     *
+     * @param array<string, string> $params
+     */
+    public function online(Request $request, array $params = []): void
+    {
+        $user = $this->requireUser($request);
+        $this->json(['ok' => true, 'matches' => (new MatchRepository(db()))->onlineForPhone((int) $user['id'])]);
+    }
+
     /** @param array<string, string> $params */
     public function store(Request $request, array $params = []): void
     {

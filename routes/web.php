@@ -98,5 +98,6 @@ $router->post('/api/v1/online-matches/{id}/invites', [OnlineMatchController::cla
 $router->post('/api/v1/online-invites/{id}/accept', [OnlineMatchController::class, 'acceptInvite']);
 $router->post('/api/v1/online-invites/{id}/decline', [OnlineMatchController::class, 'declineInvite']);
 $router->get('/api/v1/matches', [MatchController::class, 'index']);
+$router->get('/api/v1/matches/online', [MatchController::class, 'online']);
 $router->post('/api/v1/matches/{id}', [MatchController::class, 'store']);
 $router->post('/api/v1/matches/{id}/delete', [MatchController::class, 'destroy']);

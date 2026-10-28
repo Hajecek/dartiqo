@@ -12,7 +12,7 @@ $oppScore = $versus ? $scoreParts[2] : '';
 <span class="relative grid size-11 shrink-0 place-items-center rounded-xl text-sm font-bold <?= e($style['soft']) ?>" aria-hidden="true"><?= e($style['mark']) ?></span>
 <span class="relative min-w-0 flex-1">
 <strong class="block truncate text-sm font-semibold"><?= e((string) $game['title']) ?></strong>
-<small class="mt-0.5 flex items-center gap-1.5 truncate text-xs text-zinc-500"><span class="<?= e(dartiqo_game_tone((string) $game['tone'])) ?> px-1.5! py-0.5! text-[9px]!"><?= e((string) $game['mode']) ?></span><span class="truncate"><?= e((string) $game['meta']) ?></span></small>
+<small class="mt-0.5 flex items-center gap-1.5 truncate text-xs text-zinc-500"><?php if (!empty($game['online'])): ?><span class="rounded-full bg-sky-400/15 px-1.5 py-0.5 text-[9px] font-black tracking-wide text-sky-300 uppercase">Online</span><?php endif; ?><span class="<?= e(dartiqo_game_tone((string) $game['tone'])) ?> px-1.5! py-0.5! text-[9px]!"><?= e((string) $game['mode']) ?></span><span class="truncate"><?= e((string) $game['meta']) ?></span></small>
 </span>
 <span class="relative shrink-0 text-right">
 <span class="num block text-xl leading-none">

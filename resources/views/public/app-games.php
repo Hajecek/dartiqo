@@ -15,6 +15,7 @@ $filters = [
     ['win', 'Výhry', 'bg-emerald-400'],
     ['draw', 'Remízy', 'bg-amber-300'],
     ['loss', 'Prohry', 'bg-rose-400'],
+    ['online', 'Online', 'bg-sky-400'],
     ['train', 'Sólo', 'bg-accent'],
 ];
 ?>
@@ -70,6 +71,7 @@ $verdict = (string) $game['label'];
 <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
 <a class="pill" href="<?= e(url('/app/games')) ?>"><?= dartiqo_i('back') ?>Všechny hry</a>
 <div class="flex flex-wrap items-center gap-2">
+<?php if (!empty($game['online'])): ?><span class="rounded-full bg-sky-400/15 px-2 py-1 text-[10px] font-black tracking-wide text-sky-300 uppercase">Online</span><?php endif; ?>
 <span class="<?= e(dartiqo_game_tone((string) $game['tone'])) ?>"><?= e($game['mode']) ?></span>
 <span class="chip <?= e($style['soft']) ?>"><?= e($verdict) ?></span>
 <button class="icon-btn size-9 text-rose-400 hover:bg-rose-400/10 hover:text-rose-300" type="button" data-sheet="sheet-delete-match" aria-label="Smazat zápas" title="Smazat zápas"><?= dartiqo_i('trash', 'size-4') ?></button>
@@ -286,7 +288,7 @@ $ring = 2 * M_PI * 42;
 <div>
 <p class="eyebrow">Archiv</p>
 <h1 class="mt-2">Moje hry</h1>
-<p class="mt-1 max-w-xl text-sm text-zinc-400">Výhra, remíza, prohra i trénink. Otevři hru a uvidíš skóre, legy a terč.</p>
+<p class="mt-1 max-w-xl text-sm text-zinc-400">Výhra, remíza, prohra, online i sólo. Otevři hru a uvidíš skóre, legy a terč.</p>
 </div>
 <a class="pill" href="<?= e(url('/app/statistics')) ?>"><?= dartiqo_i('chart') ?>Statistiky</a>
 </header>
@@ -294,7 +296,7 @@ $ring = 2 * M_PI * 42;
 <div class="grid items-start gap-6 @4xl/dash:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]">
 <div class="flex min-w-0 flex-col gap-4" id="games-page">
 <div class="flex flex-wrap items-center gap-3">
-<div class="seg shrink-0" role="group" aria-label="Výsledek">
+<div class="seg shrink-0" role="group" aria-label="Filtr her">
 <?php foreach ($filters as $index => [$id, $label, $dot]): ?>
 <button class="<?= $index === 0 ? 'active' : '' ?>" type="button" data-result="<?= e($id) ?>"><?php if ($dot !== ''): ?><i class="size-1.5 rounded-full <?= e($dot) ?>"></i><?php endif; ?><?= e($label) ?></button>
 <?php endforeach; ?>
@@ -308,7 +310,7 @@ $ring = 2 * M_PI * 42;
 <p class="text-xs text-zinc-500" id="games-count"><?= e((string) count($games)) ?> her</p>
 <div class="flex flex-col gap-2" id="games-list">
 <?php foreach ($games as $game): ?>
-<?php $attrs = 'data-game data-result="' . e($game['result']) . '" data-search="' . e(mb_strtolower($game['title'] . ' ' . $game['mode'] . ' ' . $game['meta'], 'UTF-8')) . '"'; ?>
+<?php $attrs = 'data-game data-result="' . e($game['result']) . '" data-online="' . (!empty($game['online']) ? '1' : '0') . '" data-search="' . e(mb_strtolower($game['title'] . ' ' . $game['mode'] . ' ' . $game['meta'] . (!empty($game['online']) ? ' online' : ''), 'UTF-8')) . '"'; ?>
 <?php require __DIR__ . '/../partials/game-row.php'; ?>
 <?php endforeach; ?>
 <div class="panel py-12! text-center" id="games-empty" hidden>

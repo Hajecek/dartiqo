@@ -205,7 +205,7 @@ if(dashNode){
     $$('[data-game]').forEach(row=>{
       const days=+row.dataset.days;
       const dayOk=period==='Dnes'?days===0:days<=maxDays;
-      const resOk=result==='all'||row.dataset.result===result;
+      const resOk=result==='all'||(result==='online'?row.dataset.online==='1':row.dataset.result===result);
       const ok=dayOk&&resOk;
       row.hidden=!ok;
       if(ok)shown++;
@@ -230,7 +230,7 @@ if(gamesPage){
     const q=query.trim().toLowerCase();
     let shown=0;
     $$('[data-game]',gamesPage).forEach(row=>{
-      const ok=(result==='all'||row.dataset.result===result)&&(!q||(row.dataset.search||'').includes(q));
+      const ok=(result==='all'||(result==='online'?row.dataset.online==='1':row.dataset.result===result))&&(!q||(row.dataset.search||'').includes(q));
       row.hidden=!ok;
       if(ok)shown++;
     });
