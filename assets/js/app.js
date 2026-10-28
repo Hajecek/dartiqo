@@ -116,22 +116,196 @@ if(dashNode){
   const mountChart=(key,node,config)=>{if(!node||typeof Chart==='undefined')return;charts[key]?.destroy();charts[key]=new Chart(node,config)};
   const dayNames=['Ne','Po','Út','St','Čt','Pá','So'];
   const trendLabels=n=>Array.from({length:n},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(n-1-i));if(n===1)return 'Dnes';if(n<=7)return dayNames[d.getDay()];return d.getDate()+'. '+(d.getMonth()+1)+'.'});
+  let trendList=[];
+  const clearTrend=host=>{host?.querySelector('.trend-svg')?.remove();host?.querySelector('.trend-tip')?.remove();};
   const paintChart=values=>{
     const canvas=$('#stat-chart');if(!canvas)return;
-    const list=(values||[]).map(v=>v==null?null:Number(v));
-    if(!list.some(v=>v!==null)){charts.trend?.destroy();charts.trend=null;return}
+    const host=canvas.parentElement;
+    const list=(values||[]).map(v=>v==null||Number.isNaN(Number(v))?null:Number(v));
+    trendList=list;
+    if(!list.some(v=>v!==null)){charts.trend?.destroy();charts.trend=null;clearTrend(host);canvas.hidden=false;canvas.removeAttribute('aria-hidden');return}
     const labels=trendLabels(list.length);
     const avg=v=>'Průměr '+String(v).replace('.',',');
-    const yBase={grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#71717a',font:{size:10},maxTicksLimit:5},border:{display:false}};
-    const scales={x:{grid:{display:false},ticks:{color:'#71717a',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:list.length>10?8:list.length},border:{display:false}},y:trendKind==='bar'?{...yBase,beginAtZero:true,grace:'8%'}:{...yBase,grace:'16%'}};
-    const tooltip={displayColors:false,callbacks:{label:c=>avg(c.parsed.y)}};
-    const fill=ctx=>{const box=ctx.chart.chartArea;if(!box)return 'rgba(74,222,128,.28)';const g=ctx.chart.ctx.createLinearGradient(0,box.top,0,box.bottom);g.addColorStop(0,'rgba(74,222,128,.45)');g.addColorStop(1,'rgba(74,222,128,0)');return g};
+    const dark=document.documentElement.dataset.theme!=='light';
+    const yBase={grid:{color:dark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)'},ticks:{color:dark?'#71717a':'#52525b',font:{size:10},maxTicksLimit:5},border:{display:false}};
+    const scales={x:{grid:{display:false},ticks:{color:dark?'#71717a':'#52525b',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:list.length>10?8:list.length},border:{display:false}},y:{...yBase,beginAtZero:true,grace:'8%'}};
+    const tooltip={displayColors:false,callbacks:{label:c=>c.parsed.y==null?'Bez hry':avg(c.parsed.y)}};
     if(trendKind==='bar'){
+      clearTrend(host);
+      canvas.hidden=false;
+      canvas.removeAttribute('aria-hidden');
       mountChart('trend',canvas,{type:'bar',data:{labels,datasets:[{data:list,backgroundColor:list.map((_,i)=>i===list.length-1?'#4ade80':'rgba(74,222,128,.38)'),hoverBackgroundColor:'#86efac',borderRadius:list.length>20?4:8,borderSkipped:false,maxBarThickness:42}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip},scales}});
       return;
     }
-    mountChart('trend',canvas,{type:'line',data:{labels,datasets:[{data:list,borderColor:'#4ade80',backgroundColor:trendKind==='area'?fill:'transparent',fill:trendKind==='area',tension:.35,borderWidth:2.5,pointRadius:list.length>16?0:3.5,pointHoverRadius:5,pointHitRadius:10,pointBackgroundColor:'#18181b',pointBorderColor:'#4ade80',pointBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip},scales}});
+    charts.trend?.destroy();charts.trend=null;
+    canvas.hidden=true;
+    canvas.setAttribute('aria-hidden','true');
+    drawTrend(true);
   };
+  const drawTrend=animate=>{
+    const canvas=$('#stat-chart');if(!canvas)return;
+    const host=canvas.parentElement;
+    const list=trendList;
+    const w=host.clientWidth,h=host.clientHeight;
+    if(w<2||h<2||!list.some(v=>v!==null))return;
+    host._trendW=w;host._trendH=h;
+    const labels=trendLabels(list.length);
+    const dark=document.documentElement.dataset.theme!=='light';
+    const stroke=dark?'#4ade80':'#059669';
+    const paper=dark?'#18181b':'#ffffff';
+    const ink=dark?'#71717a':'#52525b';
+    const grid=dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)';
+    const area=trendKind==='area';
+    const played=[];
+    list.forEach((v,i)=>{if(v!==null)played.push(i)});
+    const lo=Math.min(...played.map(i=>list[i]));
+    const hi=Math.max(...played.map(i=>list[i]));
+    const padY=Math.max(12,(hi-lo)*0.8);
+    let yMin=area?0:Math.max(0,Math.floor((lo-padY)/10)*10);
+    let yMax=Math.ceil((Math.max(hi,lo)+padY)/10)*10;
+    if(hi<=180&&yMax>180)yMax=180;
+    if(yMax-yMin<40)yMax=yMin+40;
+    if(yMax<=hi)yMax=hi+8;
+    const first=played[0],last=played[played.length-1],span=Math.max(1,last-first);
+    const padL=36,padR=16,padT=28,padB=26;
+    const plotW=Math.max(1,w-padL-padR);
+    const base=h-padB;
+    const yOf=v=>padT+(1-(v-yMin)/(yMax-yMin))*(base-padT);
+    const xOf=i=>padL+((i-first)/span)*plotW;
+    const rnd=n=>Math.round(n*10)/10;
+    const fmt=v=>String(Math.round(v*10)/10).replace('.',',');
+    const avg=v=>'Průměr '+fmt(v);
+    const font=getComputedStyle(document.body).fontFamily||'sans-serif';
+    const tangents=run=>{
+      const n=run.length,m=new Array(Math.max(0,n-1)),t=new Array(n);
+      if(n<2)return t.fill(0);
+      for(let i=0;i<n-1;i++){const dx=run[i+1].x-run[i].x;m[i]=dx? (run[i+1].y-run[i].y)/dx : 0}
+      t[0]=m[0];t[n-1]=m[n-2];
+      for(let i=1;i<n-1;i++)t[i]=m[i-1]*m[i]<=0?0:(m[i-1]+m[i])/2;
+      for(let i=0;i<n-1;i++){
+        if(Math.abs(m[i])<1e-6){t[i]=0;t[i+1]=0;continue}
+        const a=t[i]/m[i],b=t[i+1]/m[i],s=a*a+b*b;
+        if(s>9){const tau=3/Math.sqrt(s);t[i]=tau*a*m[i];t[i+1]=tau*b*m[i]}
+      }
+      return t;
+    };
+    const curve=run=>{
+      if(run.length<2)return '';
+      const t=tangents(run);
+      let d='';
+      for(let i=0;i<run.length-1;i++){
+        const dx=(run[i+1].x-run[i].x)/3;
+        d+=` C ${rnd(run[i].x+dx)} ${rnd(run[i].y+t[i]*dx)} ${rnd(run[i+1].x-dx)} ${rnd(run[i+1].y-t[i+1]*dx)} ${rnd(run[i+1].x)} ${rnd(run[i+1].y)}`;
+      }
+      return d;
+    };
+    const pts=played.map(i=>({i,x:xOf(i),y:yOf(list[i]),v:list[i]}));
+    const runs=[];
+    let run=[pts[0]];
+    for(let k=1;k<pts.length;k++){
+      if(pts[k].i===pts[k-1].i+1)run.push(pts[k]);
+      else{runs.push(run);run=[pts[k]]}
+    }
+    runs.push(run);
+    const solids=[],dashes=[];
+    let fillD='';
+    if(pts.length===1){
+      const p=pts[0];
+      const x1=padL,x2=w-padR;
+      solids.push(`M ${rnd(x1)} ${rnd(p.y)} L ${rnd(x2)} ${rnd(p.y)}`);
+      if(area)fillD=`M ${rnd(x1)} ${rnd(p.y)} L ${rnd(x2)} ${rnd(p.y)} L ${rnd(x2)} ${rnd(base)} L ${rnd(x1)} ${rnd(base)} Z`;
+      p.x=(x1+x2)/2;
+    }else{
+      fillD=`M ${rnd(pts[0].x)} ${rnd(pts[0].y)}`;
+      runs.forEach((part,r)=>{
+        if(r>0){
+          const prev=runs[r-1][runs[r-1].length-1];
+          dashes.push(`M ${rnd(prev.x)} ${rnd(prev.y)} L ${rnd(part[0].x)} ${rnd(part[0].y)}`);
+          fillD+=` L ${rnd(part[0].x)} ${rnd(part[0].y)}`;
+        }
+        if(part.length>1){
+          solids.push(`M ${rnd(part[0].x)} ${rnd(part[0].y)}`+curve(part));
+          fillD+=curve(part);
+        }
+      });
+      if(area)fillD+=` L ${rnd(pts[pts.length-1].x)} ${rnd(base)} L ${rnd(pts[0].x)} ${rnd(base)} Z`;
+    }
+    const step=yMax-yMin<=40?10:yMax-yMin<=80?20:yMax-yMin<=160?40:50;
+    const ticks=[];
+    for(let v=Math.ceil(yMin/step)*step;v<=yMax+1e-6;v+=step)ticks.push(v);
+    const marks=[];
+    const want=span+1>8?6:span+1;
+    const jump=Math.max(1,Math.round(span/Math.max(1,want-1)));
+    for(let i=first;i<=last;i+=jump)marks.push(i);
+    if(marks[marks.length-1]!==last)marks.push(last);
+    const showDots=pts.length<=40;
+    const dots=pts.filter((p,i)=>showDots||i===0||i===pts.length-1);
+    const label=pts[pts.length-1];
+    const captions=[];
+    pts.forEach(p=>{const prev=captions[captions.length-1];if(!prev||p.x-prev.x>64)captions.push(p)});
+    if(captions[captions.length-1]!==label){if(label.x-captions[captions.length-1].x<64)captions.pop();captions.push(label)}
+    let svg=host.querySelector('.trend-svg');
+    if(!svg){
+      svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('class','trend-svg absolute inset-0 h-full w-full');
+      host.appendChild(svg);
+    }
+    svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    svg.setAttribute('role','img');
+    svg.setAttribute('aria-label','Denní průměr na 3 šipky');
+    svg.style.cursor='crosshair';
+    svg.style.fontFamily=font;
+    const path=(d,extra)=>d?`<path d="${d}" fill="none" stroke="${stroke}" ${extra}/>`:'';
+    svg.innerHTML=`<defs><linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${stroke}" stop-opacity=".4"/><stop offset="1" stop-color="${stroke}" stop-opacity="0"/></linearGradient></defs>`
+      +ticks.map(v=>{const y=rnd(yOf(v));return `<line x1="${padL}" x2="${w-padR}" y1="${y}" y2="${y}" stroke="${grid}" stroke-width="1"/><text x="${padL-8}" y="${y}" fill="${ink}" font-size="10" text-anchor="end" dominant-baseline="middle">${v}</text>`}).join('')
+      +marks.map(i=>{const x=rnd(pts.length===1?(padL+w-padR)/2:xOf(i));const anchor=pts.length===1?'middle':i===first?'start':i===last?'end':'middle';return `<text x="${x}" y="${h-8}" fill="${ink}" font-size="10" text-anchor="${anchor}">${escapeHtml(labels[i])}</text>`}).join('')
+      +(area&&fillD?`<path d="${fillD}" fill="url(#trend-fill)"/>`:'')
+      +solids.map(d=>path(d,'stroke-width="7" stroke-opacity=".16" stroke-linecap="round" stroke-linejoin="round"')+path(d,'stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"')).join('')
+      +dashes.map(d=>path(d,'stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round" stroke-opacity=".7"')).join('')
+      +dots.map(p=>{const lastDot=p===label;return `<circle cx="${rnd(p.x)}" cy="${rnd(p.y)}" r="${lastDot?5:3.5}" fill="${lastDot?stroke:paper}" stroke="${stroke}" stroke-width="2"/>`}).join('')
+      +captions.map(p=>{const anchor=p.x>w-48?'end':p.x<48?'start':'middle';return `<text x="${rnd(p.x)}" y="${rnd(Math.max(13,p.y-12))}" fill="${stroke}" font-size="11" font-weight="600" text-anchor="${anchor}">${fmt(p.v)}</text>`}).join('')
+      +`<line data-guide x1="0" x2="0" y1="${padT}" y2="${base}" stroke="${stroke}" stroke-opacity=".35" stroke-width="1" opacity="0"/><circle data-hover r="6" fill="none" stroke="${stroke}" stroke-width="2" opacity="0"/>`;
+    svg.classList.remove('chart-reveal');
+    if(animate&&!reduced){void svg.offsetWidth;svg.classList.add('chart-reveal')}
+    let tip=host.querySelector('.trend-tip');
+    if(!tip){tip=document.createElement('div');tip.className='trend-tip pointer-events-none absolute z-10 rounded-xl px-2.5 py-1.5 text-[11px] leading-snug shadow-xl';tip.style.display='none';host.appendChild(tip)}
+    tip.style.background=dark?'#09090b':'#ffffff';
+    tip.style.color=dark?'#fafafa':'#18181b';
+    tip.style.border=dark?'1px solid rgba(255,255,255,.12)':'1px solid rgba(0,0,0,.08)';
+    tip.style.display='none';
+    const guide=svg.querySelector('[data-guide]');
+    const hover=svg.querySelector('[data-hover]');
+    const hide=()=>{tip.style.display='none';guide.setAttribute('opacity','0');hover.setAttribute('opacity','0')};
+    svg.onpointermove=e=>{
+      const box=svg.getBoundingClientRect();
+      const x=(e.clientX-box.left)*(w/box.width);
+      const ratio=Math.max(0,Math.min(1,(x-padL)/plotW));
+      const idx=pts.length===1?first:Math.max(first,Math.min(last,Math.round(first+ratio*span)));
+      const px=pts.length===1?pts[0].x:xOf(idx);
+      const value=list[idx];
+      guide.setAttribute('x1',rnd(px));guide.setAttribute('x2',rnd(px));guide.setAttribute('opacity','1');
+      if(value===null){hover.setAttribute('opacity','0')}
+      else{hover.setAttribute('cx',rnd(px));hover.setAttribute('cy',rnd(yOf(value)));hover.setAttribute('opacity','1')}
+      tip.innerHTML=`<span style="display:block;color:${ink};font-size:10px">${escapeHtml(labels[idx])}</span><b>${value===null?'Bez hry':avg(value)}</b>`;
+      tip.style.display='block';
+      const tw=tip.offsetWidth,th=tip.offsetHeight;
+      const y=value===null?base:yOf(value);
+      let left=px-tw/2;left=Math.max(4,Math.min(w-tw-4,left));
+      let top=y-th-10;if(top<4)top=Math.min(h-th-4,y+12);
+      tip.style.left=left+'px';tip.style.top=top+'px';
+    };
+    svg.onpointerleave=hide;
+  };
+  const trendHost=$('#stat-chart')?.parentElement;
+  if(trendHost&&!trendHost._trendWatch){
+    trendHost._trendWatch=new ResizeObserver(()=>{
+      if(trendKind==='bar')return;
+      const w=trendHost.clientWidth,h=trendHost.clientHeight;
+      if(w<2||h<2||(w===trendHost._trendW&&h===trendHost._trendH))return;
+      drawTrend(false);
+    });
+    trendHost._trendWatch.observe(trendHost);
+  }
   const paintBands=bands=>{
     const rows=bands||[],total=rows.reduce((s,b)=>s+(+b[1]||0),0)||1;
     if($('#score-total'))$('#score-total').textContent=total+' kol';
@@ -219,6 +393,7 @@ if(dashNode){
   $$('[data-heat-zoom]').forEach(b=>b.onclick=()=>{heatZoom=Math.min(2.3,Math.max(1,+((heatZoom+(+b.dataset.heatZoom)).toFixed(2))));const size=500/heatZoom,o=(500-size)/2;$('#heat-board')?.setAttribute('viewBox',`${o} ${o} ${size} ${size}`)});
   $$('[data-period]').forEach(b=>b.onclick=()=>paintPeriod(b.dataset.period));
   $$('[data-trend]').forEach(b=>b.onclick=()=>{trendKind=b.dataset.trend;$$('[data-trend]').forEach(x=>{const on=x===b;x.classList.toggle('active',on);x.setAttribute('aria-pressed',on?'true':'false')});const p=dash.periods[period];if(p)paintChart(p.chart)});
+  new MutationObserver(()=>{const p=dash.periods[period];if(p)paintChart(p.chart)}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   $$('[data-result]').forEach(b=>b.onclick=()=>{result=b.dataset.result;$$('[data-result]').forEach(x=>x.classList.toggle('active',x===b));paintGames()});
   paintPeriod(dash.default);
 }
