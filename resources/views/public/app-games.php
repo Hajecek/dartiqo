@@ -86,22 +86,22 @@ $verdict = (string) $game['label'];
 <div class="absolute top-1/2 left-[30%] size-72 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-3xl <?= e($style['bar']) ?>"></div>
 <?php if ($oppGlow !== ''): ?><div class="absolute top-1/2 left-[70%] size-72 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-3xl <?= e($oppGlow) ?>"></div><?php endif; ?>
 </div>
-<div class="relative grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4 py-8 sm:px-10 sm:py-12">
-<div class="min-w-0 pr-3 text-right sm:pr-8">
+<div class="relative grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-3 py-8 sm:px-10 sm:py-12">
+<div class="min-w-0 pr-1 text-right sm:pr-8">
 <span class="eyebrow"><?= e($youCaption) ?></span>
 <strong class="mt-1 block truncate text-base font-semibold sm:text-xl" data-player-full><?= e($youTitle) ?></strong>
-<div class="num mt-4 text-7xl leading-none sm:text-9xl <?= e($style['text']) ?>"><?= e($youScore) ?></div>
-<div class="mt-4 inline-flex items-baseline gap-2 rounded-full bg-white/[.05] px-3 py-1.5 ring-1 ring-white/[.06] ring-inset">
+<div class="num mt-4 text-5xl leading-none sm:text-8xl lg:text-9xl <?= e($style['text']) ?>"><?= e($youScore) ?></div>
+<div class="mt-4 inline-flex max-w-full flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5 rounded-full bg-white/[.05] px-3 py-1.5 ring-1 ring-white/[.06] ring-inset">
 <span class="text-[10px] font-semibold tracking-[.14em] text-zinc-500 uppercase"><?= e($youStatLabel) ?></span>
 <span class="num text-base text-zinc-50"><?= e($game['avg']) ?></span>
 </div>
 </div>
-<div class="num text-4xl leading-none text-zinc-700 sm:text-6xl" aria-hidden="true">:</div>
-<div class="min-w-0 pl-3 sm:pl-8">
+<div class="num px-1 text-3xl leading-none text-zinc-700 sm:px-2 sm:text-6xl" aria-hidden="true">:</div>
+<div class="min-w-0 pl-1 sm:pl-8">
 <span class="eyebrow"><?= e($oppCaption) ?></span>
 <strong class="mt-1 block truncate text-base font-semibold sm:text-xl"><?= e($oppTitle) ?></strong>
-<div class="num mt-4 text-7xl leading-none sm:text-9xl <?= e($oppScoreClass) ?>"><?= e($oppScore) ?></div>
-<div class="mt-4 inline-flex items-baseline gap-2 rounded-full bg-white/[.05] px-3 py-1.5 ring-1 ring-white/[.06] ring-inset">
+<div class="num mt-4 text-5xl leading-none sm:text-8xl lg:text-9xl <?= e($oppScoreClass) ?>"><?= e($oppScore) ?></div>
+<div class="mt-4 inline-flex max-w-full flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-full bg-white/[.05] px-3 py-1.5 ring-1 ring-white/[.06] ring-inset">
 <span class="num text-base text-zinc-50"><?= e($oppStat) ?></span>
 <span class="text-[10px] font-semibold tracking-[.14em] text-zinc-500 uppercase"><?= e($oppStatLabel) ?></span>
 </div>
@@ -109,7 +109,7 @@ $verdict = (string) $game['label'];
 </div>
 </div>
 <?php else: ?>
-<div class="relative grid @3xl/dash:grid-cols-[1.3fr_.7fr]">
+<div class="relative grid grid-cols-1 @3xl/dash:grid-cols-[minmax(0,1.3fr)_minmax(0,.7fr)]">
 <div class="pointer-events-none absolute -top-20 -left-20 size-72 rounded-full opacity-20 blur-3xl <?= e($style['bar']) ?>" aria-hidden="true"></div>
 <div class="relative px-5 py-7 sm:px-10 sm:py-10">
 <span class="eyebrow"><?= e($youCaption) ?></span>
@@ -123,7 +123,7 @@ $verdict = (string) $game['label'];
 </div>
 <?php endif; ?>
 <div class="relative flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-white/[.06] px-5 py-3.5 sm:px-8">
-<p class="flex items-center gap-2 text-xs text-zinc-400"><?= dartiqo_i('clock', 'size-3.5 text-zinc-500') ?><?= e($game['place']) ?> · <?= e($game['meta']) ?></p>
+<p class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400"><?= dartiqo_i('clock', 'size-3.5 shrink-0 text-zinc-500') ?><span class="min-w-0"><?= e($game['place']) ?> · <?= e($game['meta']) ?></span></p>
 <?php if ($versus): ?><p class="text-xs text-zinc-500"><?= e($game['format']) ?></p><?php endif; ?>
 </div>
 <?php if ($heroKpis !== []): ?>
@@ -139,18 +139,18 @@ $verdict = (string) $game['label'];
 <?php endif; ?>
 </section>
 
-<div class="mt-4 grid items-start gap-4 @4xl/dash:grid-cols-[1.15fr_.85fr]">
+<div class="mt-4 grid min-w-0 grid-cols-1 items-start gap-4 @4xl/dash:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
 <section class="panel" aria-labelledby="steps-title">
 <div class="mb-5 flex items-end justify-between gap-3">
 <h2 id="steps-title"><?= e($game['stepsTitle']) ?></h2>
 <span class="chip bg-white/[.06] text-zinc-300"><?= e((string) $stepCount) ?> <?= e($stepWord) ?></span>
 </div>
-<ol class="relative flex flex-col gap-2 before:absolute before:top-4 before:bottom-4 before:left-[1.35rem] before:w-px before:bg-white/[.06] before:content-['']">
+<ol class="relative flex min-w-0 flex-col gap-2 before:absolute before:top-4 before:bottom-4 before:left-[1.35rem] before:w-px before:bg-white/[.06] before:content-['']">
 <?php foreach ($game['steps'] as $step): ?>
 <?php $stepStyle = dartiqo_result((string) $step['result']); ?>
-<li class="relative grid grid-cols-[2.75rem_1fr] items-center gap-3">
+<li class="relative grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-3">
 <span class="grid size-11 place-items-center rounded-xl bg-zinc-900 text-sm font-bold <?= e($stepStyle['soft']) ?>" aria-hidden="true"><?= e($stepStyle['mark']) ?></span>
-<div class="tile flex items-center justify-between gap-3 px-4 py-3">
+<div class="tile flex min-w-0 items-center justify-between gap-3 px-3 py-3 sm:px-4">
 <span class="min-w-0">
 <strong class="block text-sm font-semibold"><?= e($step['title']) ?></strong>
 <small class="mt-0.5 block truncate text-xs text-zinc-500"><?= e($step['meta']) ?></small>
@@ -189,8 +189,8 @@ $verdict = (string) $game['label'];
 <?php $rate = $attempts ? (int) round($hits / $attempts * 100) : 0; ?>
 <div>
 <div class="flex items-baseline justify-between gap-3 text-sm">
-<strong class="num"><?= e($name) ?></strong>
-<span class="text-xs text-zinc-500"><?= e((string) $hits) ?>/<?= e((string) $attempts) ?> · <b class="num text-sm <?= e($style['text']) ?>"><?= e((string) $rate) ?> %</b></span>
+<strong class="num min-w-0 truncate"><?= e($name) ?></strong>
+<span class="shrink-0 text-xs text-zinc-500"><?= e((string) $hits) ?>/<?= e((string) $attempts) ?> · <b class="num text-sm <?= e($style['text']) ?>"><?= e((string) $rate) ?> %</b></span>
 </div>
 <div class="meter mt-2"><i class="<?= e($style['bar']) ?>" style="width:<?= e((string) $rate) ?>%"></i></div>
 </div>
@@ -215,7 +215,7 @@ $verdict = (string) $game['label'];
 <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4" id="score-grid"></div>
 </article>
 
-<div class="mt-4 grid gap-4 @4xl/dash:grid-cols-2">
+<div class="mt-4 grid min-w-0 grid-cols-1 gap-4 @4xl/dash:grid-cols-2">
 <article class="panel">
 <div class="mb-4 flex items-start justify-between gap-3">
 <div><p class="eyebrow">Heatmapa</p><h3 class="mt-1">Podíl zásahů</h3><p class="mt-1 text-xs text-zinc-500">Čím světlejší pole, tím častěji ho trefuješ.</p></div>
@@ -223,9 +223,9 @@ $verdict = (string) $game['label'];
 <div id="aim-chart"></div>
 <div class="mt-4 flex items-center gap-3 text-[11px] text-zinc-500"><span>Méně</span><span class="h-1.5 flex-1 rounded-full bg-[linear-gradient(90deg,#221e1e,#5c2616,#d65c12,#fac800,#faff00,#feffd6)]"></span><span>Více</span></div>
 <div class="mt-4 grid grid-cols-3 gap-2">
-<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Nejméně</span><strong id="aim-min" class="num mt-1 block text-xl">0,0 %</strong></div>
-<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Nejvíce</span><strong id="aim-max" class="num mt-1 block text-xl text-accent">0 %</strong></div>
-<div class="tile p-3"><span class="eyebrow tracking-[.1em]">Bull</span><strong id="aim-bull" class="num mt-1 block text-xl">0 %</strong></div>
+<div class="tile p-2.5 sm:p-3"><span class="eyebrow tracking-[.1em]">Nejméně</span><strong id="aim-min" class="num mt-1 block text-base whitespace-nowrap sm:text-xl">0,0 %</strong></div>
+<div class="tile p-2.5 sm:p-3"><span class="eyebrow tracking-[.1em]">Nejvíce</span><strong id="aim-max" class="num mt-1 block text-base whitespace-nowrap text-accent sm:text-xl">0 %</strong></div>
+<div class="tile p-2.5 sm:p-3"><span class="eyebrow tracking-[.1em]">Bull</span><strong id="aim-bull" class="num mt-1 block text-base whitespace-nowrap sm:text-xl">0 %</strong></div>
 </div>
 <div id="aim-detail" class="tile mt-2 p-4 text-xs text-zinc-500" aria-live="polite">Klepni na číslo na terči pro počty v tomhle zápase.</div>
 <h3 class="mt-6">Rozložení zásahů</h3>
@@ -293,10 +293,10 @@ $ring = 2 * M_PI * 42;
 <a class="pill" href="<?= e(url('/app/statistics')) ?>"><?= dartiqo_i('chart') ?>Statistiky</a>
 </header>
 
-<div class="grid items-start gap-6 @4xl/dash:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]">
+<div class="grid min-w-0 grid-cols-1 items-start gap-6 @4xl/dash:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]">
 <div class="flex min-w-0 flex-col gap-4" id="games-page">
-<div class="flex flex-wrap items-center gap-3">
-<div class="seg shrink-0" role="group" aria-label="Filtr her">
+<div class="flex w-full min-w-0 flex-wrap items-center gap-3">
+<div class="seg max-w-full shrink-0 flex-wrap" role="group" aria-label="Filtr her">
 <?php foreach ($filters as $index => [$id, $label, $dot]): ?>
 <button class="<?= $index === 0 ? 'active' : '' ?>" type="button" data-result="<?= e($id) ?>"><?php if ($dot !== ''): ?><i class="size-1.5 rounded-full <?= e($dot) ?>"></i><?php endif; ?><?= e($label) ?></button>
 <?php endforeach; ?>
@@ -308,7 +308,7 @@ $ring = 2 * M_PI * 42;
 </label>
 </div>
 <p class="text-xs text-zinc-500" id="games-count"><?= e((string) count($games)) ?> her</p>
-<div class="flex flex-col gap-2" id="games-list">
+<div class="flex min-w-0 flex-col gap-2" id="games-list">
 <?php foreach ($games as $game): ?>
 <?php $attrs = 'data-game data-result="' . e($game['result']) . '" data-online="' . (!empty($game['online']) ? '1' : '0') . '" data-search="' . e(mb_strtolower($game['title'] . ' ' . $game['mode'] . ' ' . $game['meta'] . (!empty($game['online']) ? ' online' : ''), 'UTF-8')) . '"'; ?>
 <?php require __DIR__ . '/../partials/game-row.php'; ?>
@@ -320,7 +320,7 @@ $ring = 2 * M_PI * 42;
 </div>
 </div>
 
-<aside class="flex w-full flex-col gap-4 @4xl/dash:sticky @4xl/dash:top-8">
+<aside class="flex w-full min-w-0 flex-col gap-4 @4xl/dash:sticky @4xl/dash:top-8">
 <section class="panel" aria-labelledby="balance-title">
 <span class="pointer-events-none absolute -top-20 -right-20 size-60 rounded-full bg-emerald-400/10 blur-3xl" aria-hidden="true"></span>
 <p class="eyebrow">Bilance</p>
@@ -357,7 +357,7 @@ $ring = 2 * M_PI * 42;
 </section>
 <section class="panel" aria-labelledby="form-title">
 <div class="flex items-center justify-between"><p class="eyebrow" id="form-title">Forma</p><span class="text-xs text-zinc-500">posledních 5</span></div>
-<div class="mt-4 flex gap-2" aria-label="Forma výher, remíz a proher">
+<div class="mt-4 flex min-w-0 gap-2" aria-label="Forma výher, remíz a proher">
 <?php foreach ($formGames as $row): ?>
 <?php $tone = dartiqo_result((string) $row['result']); ?>
 <?php $short = explode(' · ', (string) $row['title'])[0]; ?>
